@@ -1,0 +1,28 @@
+{
+  "name": "prompter",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "dev": "wrangler dev",
+    "dev:local": "bun run worker/dev.ts",
+    "deploy": "wrangler deploy",
+    "build:worker": "wrangler deploy --dry-run",
+    "build:frontend": "cd frontend && bun run build",
+    "build": "bun run build:frontend && bun run build:worker",
+    "lint": "cd frontend && bun run lint",
+    "seed": "bun run worker/dev.ts"
+  },
+  "devDependencies": {
+    "@types/bun": "latest",
+    "@types/react": "^19.2.14",
+    "@types/react-dom": "^19.2.3"
+  },
+  "peerDependencies": {
+    "typescript": "^5"
+  },
+  "dependencies": {
+    "@cloudflare/workers-types": "^4.20260313.1",
+    "hono": "^4.8.5",
+    "wrangler": "^4.73.0"
+  }
+}
