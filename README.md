@@ -1,13 +1,12 @@
 # Prompter
 
-Pay-per-prompt AI image generation platform using x402 protocol for crypto payments.
+Free AI image generation platform. Upload a reference image, select a prompt style, and generate transformed images with AI.
 
 ## Features
 
 - Upload reference images (front face, full body, or others)
 - Browse prompt catalog with preview images
-- Pay with USDC on Base network via x402 protocol
-- AI image generation via OpenRouter (nano-banana-pro)
+- AI image generation via OpenRouter
 - Auto-download generated images
 
 ## Tech Stack
@@ -18,9 +17,7 @@ Pay-per-prompt AI image generation platform using x402 protocol for crypto payme
 | Cloudflare Workers | Serverless backend | [developers.cloudflare.com/workers](https://developers.cloudflare.com/workers/) |
 | Hono | Web framework | [hono.dev](https://hono.dev/docs/) |
 | Cloudflare KV | Prompt storage | [developers.cloudflare.com/kv](https://developers.cloudflare.com/kv/) |
-| Cloudflare R2 | Image storage | [developers.cloudflare.com/r2](https://developers.cloudflare.com/r2/) |
-| x402 Protocol | Crypto payments | [x402.org](https://x402.org/) · [coinbase mti docs](https://github.com/coinbase/mcp) |
-| USDC on Base | Payment token | [base.org](https://base.org/) · [circle.com/usdc](https://www.circle.com/en/usdc) |
+| Cloudflare R2 | Reference image storage | [developers.cloudflare.com/r2](https://developers.cloudflare.com/r2/) |
 | OpenRouter | AI image generation | [openrouter.ai/docs](https://openrouter.ai/docs) |
 | Bun | Runtime & package manager | [bun.com](https://bun.com/docs) |
 
@@ -56,7 +53,6 @@ cd frontend && bun dev
 - Bun (https://bun.com)
 - Cloudflare account (for Workers, KV, R2)
 - OpenRouter API key
-- Web3 wallet (MetaMask, etc.) for payments
 
 ## Setup & Configuration
 
@@ -85,10 +81,20 @@ bucket_name = "prompter-images"
 ```
 
 ### 3. Set Secrets
+Enter each secret after ```wrangler secret put ....```
 
 ```bash
 # OpenRouter API key for image generation
 wrangler secret put OPENROUTER_API_KEY
+
+# Price per generation in USD
+wrangler secret put GENERATION_PRICE_USD
+
+# AI model override (optional)
+wrangler secret put GENERATION_MODEL
+
+# Wallet address for payments
+wrangler secret put RECEIVER_WALLET_ADDRESS
 ```
 
 ### 4. Seed Prompt Catalog (Optional)
@@ -110,30 +116,6 @@ Place your prompt preview images in the R2 bucket:
 
 ```bash
 wrangler r2 object put prompter-images/prompt-1.jpg --file=./path/to/image.jpg
-```
-
-### 6. Configure Pricing (Runtime Configurable)
-
-Set the base cost and markup percentage in KV. These can be adjusted anytime without redeploying:
-
-```bash
-# Set base cost in USDC (6 decimals, e.g., 500000 = 0.50 USDC)
-wrangler kv key put PROMPTS_KV "config:base_cost_usdc" --value "500000"
-
-# Set markup percentage (e.g., 100 = 100% markup = 2x base price)
-wrangler kv key put PROMPTS_KV "config:markup_percent" --value "100"
-```
-
-**Examples:**
-| Base Cost | Markup | Final Price | Command |
-|-----------|--------|-------------|---------|
-| 0.5 USDC | 100% | 1.0 USDC | `base_cost_usdc=500000`, `markup_percent=100` |
-| 1.0 USDC | 50% | 1.5 USDC | `base_cost_usdc=1000000`, `markup_percent=50` |
-| 1.0 USDC | 100% | 2.0 USDC | `base_cost_usdc=1000000`, `markup_percent=100` |
-
-To view current pricing config:
-```bash
-curl http://localhost:8787/pricing
 ```
 
 ## Development

@@ -40,7 +40,7 @@ export function PromptGallery({ prompts, selectedPrompt, onSelectPrompt }: Promp
                 onClick={() => onSelectPrompt(prompt)}
                 disabled={selectedPrompt?.id === prompt.id}
               >
-                {selectedPrompt?.id === prompt.id ? 'Selected' : 'Turn Into'}
+                {selectedPrompt?.id === prompt.id ? 'Selected' : 'Generate'}
               </button>
             </div>
           ))}

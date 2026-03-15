@@ -279,123 +279,27 @@ body {
     max-height: 500px;
     border-radius: 8px;
   }
-}
 
-/* Error Banner */
-.error-banner {
-  grid-column: 1 / -1;
-  background: rgba(244, 67, 54, 0.1);
-  border: 1px solid var(--error);
-  border-radius: 8px;
-  padding: 12px 16px;
-  color: var(--error);
-}
-
-/* Payment Modal */
-.modal-overlay {
-  position: fixed;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.8);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 1000;
-  backdrop-filter: blur(4px);
-}
-
-.modal {
-  background: var(--surface);
-  border-radius: 12px;
-  padding: 24px;
-  width: 100%;
-  max-width: 400px;
-  border: 1px solid var(--border);
-
-  h3 {
-    margin: 0 0 16px;
-    text-align: center;
-  }
-
-  .payment-info {
-    background: var(--surface-2);
-    border-radius: 8px;
-    padding: 16px;
-    margin-bottom: 20px;
-
-    p {
-      margin: 0;
-      display: flex;
-      justify-content: space-between;
-      font-size: 0.9rem;
-
-      &.amount {
-        font-weight: bold;
-        color: var(--accent);
-        font-size: 1.2rem;
-      }
-    }
-  }
-
-  .wallet-connect {
-    text-align: center;
-    margin: 16px 0;
-  }
-
-  .wallet-connected {
-    text-align: center;
-    padding: 12px;
-    background: rgba(76, 175, 80, 0.1);
-    border-radius: 6px;
-    margin: 16px 0;
-
-    .wallet-address {
-      margin: 0;
-      font-family: monospace;
-      font-size: 0.9rem;
-      color: var(--success);
-    }
-  }
-
-  .modal-actions {
+  .result-actions {
     display: flex;
     gap: 12px;
+    justify-content: center;
     margin-top: 16px;
 
     .button {
-      flex: 1;
-      padding: 12px;
-      border: none;
-      border-radius: 6px;
-      cursor: pointer;
-      font-size: 1rem;
-      transition: all 0.2s;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
 
-      &.primary {
-        background: var(--accent);
-        color: white;
-
-        &:hover:not(:disabled) {
-          background: var(--accent-hover);
-        }
-
-        &:disabled {
-          opacity: 0.6;
-          cursor: not-allowed;
-        }
-      }
-
-      &.secondary {
-        background: var(--surface-2);
-        color: var(--text);
-        border: 1px solid var(--border);
-
-        &:hover {
-          background: var(--bg);
-        }
+      .icon {
+        width: 16px;
+        height: 16px;
       }
     }
   }
 }
+
+/* Status Section */
 
 /* Button Base */
 .button {

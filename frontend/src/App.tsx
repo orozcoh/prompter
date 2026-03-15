@@ -1,7 +1,8 @@
 import { useState, useEffect, useCallback } from 'react';
 import { ImageUpload } from './components/ImageUpload';
 import { PromptGallery } from './components/PromptGallery';
-import { PaymentModal } from './components/PaymentModal';
+import { StatusIndicator, type GenerationStatus } from './components/StatusIndicator';
+import { extractImageUrl } from './utils/extractImageUrl';
 import './App.css';
 
 interface Prompt {
@@ -16,28 +17,19 @@ interface GeneratedResult {
   promptId: string;
 }
 
-interface PricingConfig {
-  baseCostUsdc: string;
-  markupPercent: string;
-  finalPriceUsdc: string;
-}
-
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8787';
 
 function App() {
   const [referenceImage, setReferenceImage] = useState<string>('');
   const [prompts, setPrompts] = useState<Prompt[]>([]);
   const [selectedPrompt, setSelectedPrompt] = useState<Prompt | null>(null);
-  const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
-  const [isGenerating, setIsGenerating] = useState(false);
+  const [generationStatus, setGenerationStatus] = useState<GenerationStatus>('idle');
   const [result, setResult] = useState<GeneratedResult | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [pricing, setPricing] = useState<PricingConfig | null>(null);
 
-  // Fetch prompts and pricing on mount
+  // Fetch prompts on mount
   useEffect(() => {
     fetchPrompts();
-    fetchPricing();
   }, []);
 
   const fetchPrompts = async () => {
@@ -51,90 +43,46 @@ function App() {
     }
   };
 
-  const fetchPricing = async () => {
-    try {
-      const response = await fetch(`${API_BASE}/pricing`);
-      const data = await response.json();
-      setPricing(data);
-    } catch (err) {
-      console.error('Failed to load pricing:', err);
-    }
-  };
-
-  // Get price in USDC (converts from 6-decimal to decimal string)
-  const getPriceInUsdc = (): string => {
-    if (!pricing?.finalPriceUsdc) return '1.00';
-    // Convert from 6 decimals (e.g., "100000" -> "0.10")
-    const value = BigInt(pricing.finalPriceUsdc);
-    const divisor = BigInt(1000000);
-    const whole = value / divisor;
-    const fraction = value % divisor;
-    // Pad fraction to 6 digits and remove trailing zeros
-    const fractionStr = fraction.toString().padStart(6, '0').replace(/0+$/, '');
-    return `${whole}.${fractionStr || '00'}`;
-  };
-
-  const handleGenerate = useCallback(async () => {
-    if (!selectedPrompt) {
-      setError('Please select a prompt style');
-      return;
-    }
-
-    setIsGenerating(true);
+  const handleGenerate = useCallback(async (prompt: Prompt) => {
+    setGenerationStatus('generating');
     setError(null);
 
     try {
-      // First, complete payment via x402
-      const paymentResponse = await fetch(`${API_BASE}/x402/pay`, {
+      const response = await fetch(`${API_BASE}/generate`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          amount: pricing?.finalPriceUsdc || '1000000', // Dynamic price from API
-          token: '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913', // USDC on Base
-          chainId: 8453, // Base
-          payer: await getWalletAddress(),
-          signature: await signPayment(),
-          nonce: crypto.randomUUID(),
-        }),
-      });
-
-      const paymentData = await paymentResponse.json();
-      if (!paymentData.success) {
-        throw new Error('Payment failed');
-      }
-
-      // Now generate the image with payment token
-      const generateResponse = await fetch(`${API_BASE}/generate`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-authorization': `Bearer ${paymentData.paymentToken}`,
-        },
-        body: JSON.stringify({
-          promptId: selectedPrompt.id,
+          promptId: prompt.id,
           referenceImage,
         }),
       });
 
-      const generateData = await generateResponse.json();
-      if (!generateData.success) {
-        throw new Error(generateData.error || 'Generation failed');
+      const data = await response.json();
+      if (!data.success) {
+        throw new Error(data.error || 'Generation failed');
+      }
+
+      // Log full API response for debugging
+      console.log('OpenRouter API response:', data.apiResponse);
+
+      // Extract image URL from API response
+      const imageUrl = extractImageUrl(data.apiResponse);
+      if (!imageUrl) {
+        throw new Error('No image found in API response');
       }
 
       setResult({
-        imageUrl: generateData.imageUrl,
-        promptId: selectedPrompt.id,
+        imageUrl,
+        promptId: prompt.id,
       });
 
-      // Auto-download
-      await downloadImage(generateData.imageUrl);
+      setGenerationStatus('completed');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Generation failed');
+      setGenerationStatus('error');
       console.error(err);
-    } finally {
-      setIsGenerating(false);
     }
-  }, [selectedPrompt, referenceImage]);
+  }, [referenceImage]);
 
   const downloadImage = async (url: string) => {
     try {
@@ -153,35 +101,15 @@ function App() {
     }
   };
 
-  const getWalletAddress = async (): Promise<string> => {
-    if (typeof window.ethereum !== 'undefined') {
-      const accounts = await window.ethereum.request({ method: 'eth_accounts' });
-      return accounts[0] || '';
-    }
-    return '';
-  };
-
-  const signPayment = async (): Promise<string> => {
-    if (typeof window.ethereum !== 'undefined') {
-      const address = await getWalletAddress();
-      const message = `Generate image - ${Date.now()}`;
-      const signature = await window.ethereum.request({
-        method: 'personal_sign',
-        params: [message, address],
-      });
-      return signature;
-    }
-    return '0x' + '0'.repeat(130);
-  };
-
   const handleSelectPrompt = (prompt: Prompt) => {
     setSelectedPrompt(prompt);
-    setIsPaymentModalOpen(true);
+    handleGenerate(prompt);
   };
 
-  const handlePaymentConfirm = () => {
-    setIsPaymentModalOpen(false);
-    handleGenerate();
+  const handleReset = () => {
+    setResult(null);
+    setGenerationStatus('idle');
+    setError(null);
   };
 
   return (
@@ -204,27 +132,30 @@ function App() {
           />
         </div>
 
+        <div className="status-section">
+          <StatusIndicator status={generationStatus} error={error} />
+        </div>
+
         {result && (
           <div className="result-section">
             <h3>Generated Image</h3>
             <img src={result.imageUrl} alt="Generated result" />
-          </div>
-        )}
-
-        {error && (
-          <div className="error-banner">
-            {error}
+            <div className="result-actions">
+              <button className="button primary" onClick={() => downloadImage(result.imageUrl)}>
+                <svg className="icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                  <polyline points="7 10 12 15 17 10"/>
+                  <line x1="12" y1="15" x2="12" y2="3"/>
+                </svg>
+                Download
+              </button>
+              <button className="button secondary" onClick={handleReset}>
+                Generate Another
+              </button>
+            </div>
           </div>
         )}
       </main>
-
-      <PaymentModal
-        isOpen={isPaymentModalOpen}
-        amount={getPriceInUsdc()}
-        onConfirm={handlePaymentConfirm}
-        onCancel={() => setIsPaymentModalOpen(false)}
-        isLoading={isGenerating}
-      />
     </div>
   );
 }

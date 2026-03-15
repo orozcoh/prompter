@@ -124,11 +124,6 @@ const seedPrompts = async (kv: MemoryKV) => {
     imageUrl: 'https://picsum.photos/seed/anime/400/400',
   }));
 
-  // Set default pricing from env vars (defaults: 0.10 USDC base, 0% markup)
-  const priceUsd = process.env.GENERATION_PRICE_USD || '0.10';
-  const priceIn6Decimals = Math.round(parseFloat(priceUsd) * 1000000).toString();
-  await kv.put('config:base_cost_usdc', priceIn6Decimals);
-  await kv.put('config:markup_percent', '0');
 };
 
 // Create mock environment
@@ -152,9 +147,6 @@ console.log(`🚀 Local dev server running at http://localhost:${server.port}`);
 console.log(`📋 Test endpoints:`);
 console.log(`   - GET  http://localhost:${server.port}/health`);
 console.log(`   - GET  http://localhost:${server.port}/prompts`);
-console.log(`   - GET  http://localhost:${server.port}/pricing`);
-console.log(`   - POST http://localhost:${server.port}/x402/pay`);
 console.log(`   - POST http://localhost:${server.port}/generate`);
 console.log(`\n💡 Config from .env:`);
-console.log(`   - GENERATION_PRICE_USD: ${process.env.GENERATION_PRICE_USD || '0.10'}`);
 console.log(`   - GENERATION_MODEL: ${process.env.GENERATION_MODEL || 'google/gemini-2.5-flash-image-preview'}`);
