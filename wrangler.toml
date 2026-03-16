@@ -13,3 +13,12 @@ id = "placeholder-update-on-deploy"  # Replace with actual KV namespace ID
 [[r2_buckets]]
 binding = "IMAGES_R2"
 bucket_name = "prompter-images"
+
+# Environment variables (can be overridden with wrangler secret put or .dev.vars)
+[vars]
+# Base RPC URL - use Sepolia for testing, Mainnet for production
+# Base Sepolia: https://sepolia.base.org
+# Base Mainnet: https://mainnet.base.org
+BASE_RPC_URL = "https://mainnet.base.org"
+# Minimum confirmations required before accepting payment
+MIN_CONFIRMATIONS = "3"

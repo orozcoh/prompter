@@ -11,7 +11,7 @@ Free AI image generation platform. Users upload a reference image, select a prom
 - **Frontend**: Vite + React + TypeScript
 - **Backend**: Cloudflare Workers with Hono
 - **Storage**: Cloudflare KV (prompts), Cloudflare R2 (catalog images)
-- **AI**: OpenRouter API (google/gemini-2.5-flash-image-preview model)
+- **AI**: OpenRouter API (sourceful/riverflow-v2-fast-preview model)
 - **Runtime**: Bun
 
 ## Commands

@@ -35,11 +35,14 @@ function App() {
     isPaid,
     isConnecting,
     isConnected,
+    isVerifying,
     error: paymentError,
     paymentRequired,
     walletAddress,
+    txHash,
     connectWallet,
-    makePayment,
+    signAndSendTransaction,
+    verifyPayment,
     parsePaymentRequired,
     resetPayment,
   } = useX402Payment();
@@ -69,13 +72,12 @@ function App() {
     setSelectedPromptForPayment(prompt);
 
     try {
-      // First attempt without payment
+      // First attempt without payment - only send promptId to get payment info
       const response = await fetch(`${API_BASE}/generate`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           promptId: prompt.id,
-          referenceImage,
         }),
       });
 
@@ -124,57 +126,50 @@ function App() {
         await connectWallet();
       }
 
-      // Define the original request to retry after payment
-      const originalRequest = async () => {
-        return await fetch(`${API_BASE}/generate`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            promptId: selectedPromptForPayment.id,
-            referenceImage,
-          }),
-        });
-      };
-
-      // Make payment and retry request with payment headers
-      const result = await makePayment(paymentRequired, originalRequest);
-
-      if (result.ok) {
-        const data = await result.json();
-        if (!data.success) {
-          throw new Error(data.error || 'Generation failed');
-        }
-
-        const imageUrl = extractImageUrl(data.apiResponse);
-        if (!imageUrl) {
-          throw new Error('No image found in API response');
-        }
-
-        setResult({
-          imageUrl,
-          promptId: selectedPromptForPayment.id,
-        });
-
-        setGenerationStatus('completed');
-        resetPayment();
-        setSelectedPromptForPayment(null);
-      } else if (result.status === 400) {
-        const errorBody = await result.text();
-        console.error('[App] 400 error body:', errorBody);
-        throw new Error(`Payment validation failed: ${errorBody}`);
-      } else if (result.status === 402) {
-        const errorBody = await result.text();
-        console.error('[App] 402 error body:', errorBody);
-        throw new Error(`Payment rejected: ${errorBody}`);
-      } else {
-        throw new Error('Payment processed but generation failed');
+      // Get payment details from the scheme
+      const scheme = paymentRequired.schemes[0];
+      if (!scheme || !scheme.payTo || !scheme.amount) {
+        throw new Error('Invalid payment details');
       }
+
+      // Sign and send USDC transfer transaction
+      const hash = await signAndSendTransaction({
+        payTo: scheme.payTo,
+        amount: scheme.amount,
+      });
+
+      // Verify payment with worker and generate image
+      const response = await verifyPayment(
+        hash,
+        selectedPromptForPayment.id,
+        referenceImage
+      );
+
+      const data = await response.json();
+      if (!data.success) {
+        throw new Error(data.error || 'Generation failed');
+      }
+
+      // Extract image URL from API response
+      const imageUrl = extractImageUrl(data.apiResponse);
+      if (!imageUrl) {
+        throw new Error('No image found in API response');
+      }
+
+      setResult({
+        imageUrl,
+        promptId: selectedPromptForPayment.id,
+      });
+
+      setGenerationStatus('completed');
+      resetPayment();
+      setSelectedPromptForPayment(null);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Payment/Generation failed');
       setGenerationStatus('error');
       console.error(err);
     }
-  }, [paymentRequired, selectedPromptForPayment, referenceImage, makePayment, resetPayment, isConnected, walletAddress, connectWallet, extractImageUrl]);
+  }, [paymentRequired, selectedPromptForPayment, referenceImage, signAndSendTransaction, verifyPayment, resetPayment, isConnected, walletAddress, connectWallet, extractImageUrl]);
 
   const handleClosePaywall = useCallback(() => {
     resetPayment();
@@ -272,10 +267,12 @@ function App() {
           isPaying={isPaying}
           isConnected={isConnected}
           isPaid={isPaid}
+          isVerifying={isVerifying}
           walletAddress={walletAddress}
+          txHash={txHash}
           error={paymentError}
           onConnectWallet={handleConnectWallet}
-          onMakePayment={handleGenerateWithPayment}
+          onPayAndGenerate={handleGenerateWithPayment}
           onClose={handleClosePaywall}
         />
       </main>

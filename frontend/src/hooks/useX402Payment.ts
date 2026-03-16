@@ -1,10 +1,19 @@
 import { useState, useCallback } from 'react';
-import { type Address } from 'viem';
+import { type Address, encodeFunctionData, parseAbi, type Hash } from 'viem';
 import { base } from 'viem/chains';
 import { x402Client, x402HTTPClient } from '@x402/fetch';
 import { ExactEvmScheme } from '@x402/evm/exact/client';
 import { toClientEvmSigner } from '@x402/evm';
 import { encodePaymentSignatureHeader } from '@x402/core/http';
+
+// USDC ABI for transfer function
+const USDC_ABI = parseAbi([
+  'function transfer(address to, uint256 amount) returns (bool)',
+  'function decimals() view returns (uint8)',
+]);
+
+// USDC contract address on Base
+const USDC_CONTRACT = '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913';
 
 export interface PaymentRequiredResponse {
   x402Version: number;
@@ -33,11 +42,13 @@ export interface PaymentState {
   isPaid: boolean;
   isConnecting: boolean;
   isConnected: boolean;
+  isVerifying: boolean;
   error: string | null;
   paymentRequired: PaymentRequiredResponse | null;
   rawPaymentRequired: any | null; // Store raw decoded PAYMENT-REQUIRED header
   walletAddress: Address | null;
   chainId: number | null;
+  txHash: string | null;
 }
 
 export function useX402Payment() {
@@ -46,11 +57,13 @@ export function useX402Payment() {
     isPaid: false,
     isConnecting: false,
     isConnected: false,
+    isVerifying: false,
     error: null,
     paymentRequired: null,
     rawPaymentRequired: null,
     walletAddress: null,
     chainId: null,
+    txHash: null,
   });
 
   // Connect wallet using viem wallet connectors
@@ -131,6 +144,140 @@ export function useX402Payment() {
     }
   }, []);
 
+  // Create USDC transfer transaction data
+  const createUSDCTransaction = useCallback((paymentDetails: {
+    payTo: Address;
+    amount: string; // Raw amount in USDC smallest units (6 decimals)
+  }) => {
+    if (!state.walletAddress) {
+      throw new Error('Wallet not connected');
+    }
+
+    const transferData = encodeFunctionData({
+      abi: USDC_ABI,
+      functionName: 'transfer',
+      args: [paymentDetails.payTo, BigInt(paymentDetails.amount)],
+    });
+
+    return {
+      to: USDC_CONTRACT as Address,
+      data: transferData,
+      value: 0n,
+      from: state.walletAddress,
+    };
+  }, [state.walletAddress]);
+
+  // Sign and send USDC transfer transaction
+  const signAndSendTransaction = useCallback(async (
+    paymentDetails: {
+      payTo: Address;
+      amount: string;
+    }
+  ): Promise<Hash> => {
+    setState(prev => ({ ...prev, isPaying: true, error: null }));
+
+    try {
+      let address: Address;
+
+      if (!state.isConnected || !state.walletAddress) {
+        const result = await connectWallet();
+        address = result.address as Address;
+      } else {
+        address = state.walletAddress;
+      }
+
+      const { createWalletClient, custom, publicActions } = await import('viem');
+      const ethereum = (window as any).ethereum;
+
+      const walletClient = createWalletClient({
+        chain: base,
+        transport: custom(ethereum),
+        account: address,
+      }).extend(publicActions);
+
+      // Simulate the transaction first (optional but recommended)
+      try {
+        await walletClient.simulateContract({
+          account: address,
+          address: USDC_CONTRACT as Address,
+          abi: USDC_ABI,
+          functionName: 'transfer',
+          args: [paymentDetails.payTo, BigInt(paymentDetails.amount)],
+        });
+      } catch (simError: any) {
+        console.warn('Transaction simulation failed:', simError);
+        // Continue anyway - simulation can fail for various reasons
+      }
+
+      // Write (sign and send) the transaction
+      const hash = await walletClient.writeContract({
+        account: address,
+        address: USDC_CONTRACT as Address,
+        abi: USDC_ABI,
+        functionName: 'transfer',
+        args: [paymentDetails.payTo, BigInt(paymentDetails.amount)],
+      });
+
+      setState(prev => ({
+        ...prev,
+        isPaying: false,
+        isPaid: true,
+        txHash: hash,
+      }));
+
+      return hash;
+    } catch (error: any) {
+      setState(prev => ({
+        ...prev,
+        isPaying: false,
+        error: error instanceof Error ? error.message : 'Transaction failed',
+      }));
+      throw error;
+    }
+  }, [state.isConnected, state.walletAddress, connectWallet]);
+
+  // Verify payment with worker
+  const verifyPayment = useCallback(async (
+    txHash: string,
+    promptId: string,
+    referenceImage?: string
+  ): Promise<Response> => {
+    setState(prev => ({ ...prev, isVerifying: true, error: null }));
+
+    try {
+      const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8787';
+
+      const response = await fetch(`${API_BASE}/verify-payment`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          txHash,
+          promptId,
+          referenceImage,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ error: 'Verification failed' }));
+        throw new Error(errorData.reason || errorData.error || 'Payment verification failed');
+      }
+
+      setState(prev => ({
+        ...prev,
+        isVerifying: false,
+      }));
+
+      return response;
+    } catch (error) {
+      setState(prev => ({
+        ...prev,
+        isVerifying: false,
+        error: error instanceof Error ? error.message : 'Verification failed',
+      }));
+      throw error;
+    }
+  }, []);
+
   // Make payment using x402
   const makePayment = useCallback(async (
     paymentRequired: PaymentRequiredResponse,
@@ -173,11 +320,6 @@ export function useX402Payment() {
         }
       );
 
-      console.log('[makePayment] walletClient:', walletClient);
-      console.log('[makePayment] signer:', signer);
-      console.log('[makePayment] address:', address);
-      console.log('[makePayment] state.rawPaymentRequired:', state.rawPaymentRequired);
-
       // Get the first scheme from payment required
       const scheme = paymentRequired.schemes[0];
       if (!scheme) {
@@ -213,8 +355,6 @@ export function useX402Payment() {
         },
       };
 
-      console.log('[makePayment] paymentRequiredInput:', JSON.stringify(paymentRequiredInput, null, 2));
-
       // Create x402 client and register EVM scheme
       const client = new x402Client()
         .register('eip155:*', new ExactEvmScheme(signer));
@@ -222,17 +362,11 @@ export function useX402Payment() {
       // Create HTTP client for payment operations
       const httpClient = new x402HTTPClient(client);
 
-      console.log('[makePayment] Creating payment payload...');
-
       // Create payment payload from the payment required object
       const paymentPayload = await httpClient.createPaymentPayload(paymentRequiredInput);
 
-      console.log('[makePayment] paymentPayload created successfully');
-
       // Encode payment signature header using the imported function
       const paymentHeader = encodePaymentSignatureHeader(paymentPayload);
-
-      console.log('[makePayment] paymentHeader:', paymentHeader);
 
       // Retry the original request with payment header
       const paymentResponse = await fetch(url, {
@@ -243,8 +377,6 @@ export function useX402Payment() {
         },
         body: bodyText,
       });
-
-      console.log('[makePayment] paymentResponse status:', paymentResponse.status);
 
       // Check if payment was accepted
       if (paymentResponse.status === 402) {
@@ -270,8 +402,6 @@ export function useX402Payment() {
     // Transform x402 accepts array to our schemes format
     const schemes = (data.accepts || []).map((accept: any) => {
       const payTo = accept.payTo || accept.extra?.payTo;
-      console.log('[formatPaymentRequired] accept:', accept);
-      console.log('[formatPaymentRequired] extracted payTo:', payTo);
       return {
         scheme: accept.scheme,
         network: accept.network,
@@ -295,22 +425,16 @@ export function useX402Payment() {
 
   // Parse 402 response
   const parsePaymentRequired = useCallback(async (response: Response): Promise<PaymentRequiredResponse | null> => {
-    console.log('[parsePaymentRequired] Status:', response.status);
     if (response.status !== 402) return null;
 
     try {
       // Clone response to avoid consuming the body stream
       const clonedResponse = response.clone();
       const data = await clonedResponse.json();
-      console.log('[parsePaymentRequired] Body data:', data);
 
       // Check for x402 headers (various formats)
       const paymentRequiredHeader = response.headers.get('x402-payment-required');
       const paymentRequiredHeaderUpper = response.headers.get('PAYMENT-REQUIRED');
-      console.log('[parsePaymentRequired] Headers:', {
-        'x402-payment-required': paymentRequiredHeader,
-        'PAYMENT-REQUIRED': paymentRequiredHeaderUpper
-      });
       let parsed: PaymentRequiredResponse | null = null;
       let decoded: any = null; // Store the decoded header for rawPaymentRequired
 
@@ -318,9 +442,7 @@ export function useX402Payment() {
       if (paymentRequiredHeaderUpper) {
         try {
           decoded = JSON.parse(atob(paymentRequiredHeaderUpper));
-          console.log('[parsePaymentRequired] Decoded PAYMENT-REQUIRED:', decoded);
           parsed = formatPaymentRequired(decoded);
-          console.log('[parsePaymentRequired] Parsed from header:', parsed);
         } catch (err) {
           console.error('Failed to decode PAYMENT-REQUIRED header:', err);
         }
@@ -330,7 +452,6 @@ export function useX402Payment() {
       if (!parsed && paymentRequiredHeader) {
         try {
           decoded = JSON.parse(decodeURIComponent(paymentRequiredHeader));
-          console.log('[parsePaymentRequired] Decoded x402-payment-required:', decoded);
           parsed = formatPaymentRequired(decoded);
         } catch {
           // Fall through to body parsing
@@ -339,7 +460,6 @@ export function useX402Payment() {
 
       // Try to parse from body
       if (!parsed && (data?.schemes || data?.x402Version)) {
-        console.log('[parsePaymentRequired] Parsing from body');
         decoded = data;
         parsed = formatPaymentRequired(data);
       }
@@ -354,7 +474,6 @@ export function useX402Payment() {
         return parsed;
       }
 
-      console.log('[parsePaymentRequired] Could not parse - no valid format found');
       return null;
     } catch (err) {
       console.error('[parsePaymentRequired] Error:', err);
@@ -368,8 +487,10 @@ export function useX402Payment() {
       ...prev,
       isPaid: false,
       isPaying: false,
+      isVerifying: false,
       paymentRequired: null,
       rawPaymentRequired: null,
+      txHash: null,
       error: null,
     }));
   }, []);
@@ -389,6 +510,9 @@ export function useX402Payment() {
     ...state,
     connectWallet,
     makePayment,
+    createUSDCTransaction,
+    signAndSendTransaction,
+    verifyPayment,
     parsePaymentRequired,
     resetPayment,
     disconnectWallet,

@@ -37,7 +37,7 @@ body {
 
   h1 {
     margin: 0;
-    font-size: 3rem;
+    font-size: clamp(2rem, 5vw, 3rem);
     background: linear-gradient(135deg, var(--accent) 0%, #a855f7 100%);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
@@ -48,6 +48,14 @@ body {
     margin: 8px 0 0;
     color: var(--text-muted);
     font-size: 1.1rem;
+  }
+
+  @media (max-width: 480px) {
+    padding: 32px 16px 16px;
+
+    h1 {
+      font-size: 2rem;
+    }
   }
 }
 
@@ -63,6 +71,16 @@ body {
   @media (max-width: 900px) {
     grid-template-columns: 1fr;
     padding: 16px;
+  }
+
+  @media (max-width: 640px) {
+    padding: 12px;
+    gap: 20px;
+  }
+
+  @media (max-width: 480px) {
+    padding: 8px;
+    gap: 16px;
   }
 }
 
@@ -80,6 +98,15 @@ body {
     font-size: 1.1rem;
   }
 
+  @media (max-width: 640px) {
+    position: static;
+    padding: 16px;
+  }
+
+  @media (max-width: 480px) {
+    padding: 12px;
+  }
+
   .category-selector {
     display: flex;
     gap: 12px;
@@ -93,9 +120,29 @@ body {
       cursor: pointer;
       font-size: 0.9rem;
       color: var(--text-muted);
+      min-height: 44px;
+      padding: 8px;
+      border-radius: 6px;
+      transition: background 0.2s;
+
+      &:hover,
+      &:focus-visible {
+        background: var(--surface-2);
+      }
 
       input[type="radio"] {
         accent-color: var(--accent);
+        min-width: 18px;
+        min-height: 18px;
+      }
+    }
+
+    @media (max-width: 480px) {
+      gap: 8px;
+
+      label {
+        font-size: 0.85rem;
+        padding: 6px;
       }
     }
   }
@@ -122,24 +169,36 @@ body {
 
     .drop-placeholder {
       text-align: center;
-      padding: 24px;
+      padding: 20px;
 
       p {
         color: var(--text-muted);
         margin: 0 0 12px;
+        font-size: 0.9rem;
       }
 
       .button {
         display: inline-block;
-        padding: 8px 16px;
+        padding: 10px 20px;
+        min-height: 44px;
         background: var(--accent);
         color: white;
         border-radius: 6px;
         cursor: pointer;
-        font-size: 0.9rem;
+        font-size: 0.95rem;
 
-        &:hover {
+        &:hover,
+        &:focus-visible {
           background: var(--accent-hover);
+        }
+      }
+
+      @media (max-width: 480px) {
+        padding: 16px;
+
+        .button {
+          padding: 10px 16px;
+          font-size: 0.9rem;
         }
       }
     }
@@ -154,15 +213,23 @@ body {
   .button.secondary {
     width: 100%;
     margin-top: 12px;
-    padding: 10px;
+    padding: 12px;
+    min-height: 44px;
     background: var(--surface-2);
     border: 1px solid var(--border);
     color: var(--text);
     border-radius: 6px;
     cursor: pointer;
+    font-size: 0.95rem;
 
-    &:hover {
+    &:hover,
+    &:focus-visible {
       background: var(--bg);
+    }
+
+    @media (max-width: 480px) {
+      padding: 10px;
+      font-size: 0.9rem;
     }
   }
 }
@@ -184,8 +251,18 @@ body {
 
   .gallery-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-    gap: 16px;
+    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+    gap: 12px;
+
+    @media (max-width: 640px) {
+      grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+      gap: 10px;
+    }
+
+    @media (max-width: 480px) {
+      grid-template-columns: repeat(2, 1fr);
+      gap: 8px;
+    }
   }
 
   .gallery-item {
@@ -199,7 +276,8 @@ body {
       border-color: var(--accent);
     }
 
-    &:hover {
+    &:hover,
+    &:focus-visible {
       transform: translateY(-2px);
       box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
     }
@@ -241,15 +319,17 @@ body {
 
     .turn-into-btn {
       width: 100%;
-      padding: 10px;
+      padding: 12px;
+      min-height: 44px;
       background: var(--accent);
       color: white;
       border: none;
       cursor: pointer;
-      font-size: 0.9rem;
+      font-size: 0.95rem;
       transition: background 0.2s;
 
-      &:hover:not(:disabled) {
+      &:hover,
+      &:focus-visible:not(:disabled) {
         background: var(--accent-hover);
       }
 
@@ -257,6 +337,11 @@ body {
         background: var(--surface-2);
         color: var(--text-muted);
         cursor: not-allowed;
+      }
+
+      @media (max-width: 480px) {
+        padding: 10px;
+        font-size: 0.9rem;
       }
     }
   }
@@ -285,15 +370,26 @@ body {
     gap: 12px;
     justify-content: center;
     margin-top: 16px;
+    flex-wrap: wrap;
 
     .button {
       display: inline-flex;
       align-items: center;
       gap: 8px;
+      min-height: 44px;
+      padding: 10px 20px;
 
       .icon {
-        width: 16px;
-        height: 16px;
+        width: 18px;
+        height: 18px;
+      }
+    }
+
+    @media (max-width: 480px) {
+      flex-direction: column;
+
+      .button {
+        width: 100%;
       }
     }
   }
@@ -306,9 +402,10 @@ body {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  padding: 8px 16px;
+  padding: 10px 16px;
+  min-height: 44px;
   border-radius: 6px;
-  font-size: 0.9rem;
+  font-size: 0.95rem;
   cursor: pointer;
   transition: all 0.2s;
   text-decoration: none;
@@ -318,7 +415,8 @@ body {
     color: white;
     border: none;
 
-    &:hover {
+    &:hover,
+    &:focus-visible {
       background: var(--accent-hover);
     }
   }
@@ -328,7 +426,8 @@ body {
     color: var(--text);
     border: 1px solid var(--border);
 
-    &:hover {
+    &:hover,
+    &:focus-visible {
       background: var(--surface-2);
     }
   }

@@ -131,11 +131,13 @@ const env = {
   PROMPTS_KV: new MemoryKV(),
   IMAGES_R2: new MemoryR2(),
   OPENROUTER_API_KEY: process.env.OPENROUTER_API_KEY || 'test-key',
-  GENERATION_MODEL: process.env.GENERATION_MODEL || 'google/gemini-2.5-flash-image-preview',
+  GENERATION_MODEL: process.env.GENERATION_MODEL || 'sourceful/riverflow-v2-fast-preview',
   X402_PRICE_USD: process.env.X402_PRICE_USD || '0.001',
   X402_PAY_TO_ADDRESS: process.env.X402_PAY_TO_ADDRESS || '0x7B3193eEb2d754d126b70A1F184659D52740D306',
   X402_FACILITATOR_URL: process.env.X402_FACILITATOR_URL,
   LOCAL_DEV_BYPASS_PAYMENT: process.env.LOCAL_DEV_BYPASS_PAYMENT || 'true',
+  BASE_RPC_URL: process.env.BASE_RPC_URL || 'https://mainnet.base.org',
+  MIN_CONFIRMATIONS: process.env.MIN_CONFIRMATIONS || '3',
 };
 
 // Seed sample data
@@ -153,9 +155,11 @@ console.log(`   - GET  http://localhost:${server.port}/health`);
 console.log(`   - GET  http://localhost:${server.port}/prompts`);
 console.log(`   - POST http://localhost:${server.port}/generate`);
 console.log(`\n💡 Config from .env:`);
-console.log(`   - GENERATION_MODEL: ${process.env.GENERATION_MODEL || 'google/gemini-2.5-flash-image-preview'}`);
+console.log(`   - GENERATION_MODEL: ${process.env.GENERATION_MODEL || 'sourceful/riverflow-v2-fast-preview'}`);
 console.log(`   - X402_PAY_TO_ADDRESS: ${env.X402_PAY_TO_ADDRESS}`);
 console.log(`   - X402_PRICE_USD: ${env.X402_PRICE_USD}`);
+console.log(`   - BASE_RPC_URL: ${env.BASE_RPC_URL}`);
+console.log(`   - MIN_CONFIRMATIONS: ${env.MIN_CONFIRMATIONS}`);
 console.log(`   - LOCAL_DEV_BYPASS_PAYMENT: ${env.LOCAL_DEV_BYPASS_PAYMENT}${env.LOCAL_DEV_BYPASS_PAYMENT === 'true' ? ' (payment validation bypassed)' : ' (payment validation ENABLED)'}`);
 console.log(`\n🔐 To enable real payments:`);
 console.log(`   1. Add FACILITATOR_PRIVATE_KEY to .env (wallet for gas fees)`);

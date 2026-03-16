@@ -8,10 +8,12 @@ interface PaywallModalProps {
   isPaying: boolean;
   isConnected: boolean;
   isPaid: boolean;
+  isVerifying: boolean;
   walletAddress: string | null;
+  txHash: string | null;
   error: string | null;
   onConnectWallet: () => Promise<void>;
-  onMakePayment: () => Promise<void>;
+  onPayAndGenerate: () => Promise<void>;
   onClose: () => void;
 }
 
@@ -22,10 +24,12 @@ export function PaywallModal({
   isPaying,
   isConnected,
   isPaid,
+  isVerifying,
   walletAddress,
+  txHash,
   error,
   onConnectWallet,
-  onMakePayment,
+  onPayAndGenerate,
   onClose,
 }: PaywallModalProps) {
   if (!isOpen) return null;
@@ -45,6 +49,12 @@ export function PaywallModal({
   };
 
   const scheme = paymentRequired?.schemes?.[0];
+
+  const copyToClipboard = async (text: string) => {
+    await navigator.clipboard.writeText(text);
+  };
+
+  const explorerUrl = txHash ? `https://basescan.org/tx/${txHash}` : null;
 
   return (
     <div className="paywall-overlay" onClick={onClose}>
@@ -87,6 +97,22 @@ export function PaywallModal({
               <div className="payment-row">
                 <span className="payment-label">Payment Method</span>
                 <span className="payment-value">USDC on Base</span>
+              </div>
+              <div className="payment-row">
+                <span className="payment-label">Recipient</span>
+                <div className="payment-value address-value">
+                  <span className="address-text">{formatAddress(scheme.payTo)}</span>
+                  <button
+                    className="copy-button"
+                    onClick={() => copyToClipboard(scheme.payTo)}
+                    title="Copy address"
+                  >
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
+                      <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+                    </svg>
+                  </button>
+                </div>
               </div>
               <div className="payment-row">
                 <span className="payment-label">Description</span>
@@ -140,17 +166,19 @@ export function PaywallModal({
                 <button
                   className="step-action button-primary"
                   onClick={onConnectWallet}
-                  disabled={isConnecting || isPaying}
+                  disabled={isConnecting || isPaying || isVerifying}
                 >
                   Connect
                 </button>
               )}
             </div>
 
-            {/* Step 2: Approve Payment */}
-            <div className={`payment-step ${isPaid ? 'completed' : ''} ${isPaying ? 'active' : ''}`}>
+            {/* Step 2: Pay & Generate */}
+            <div className={`payment-step ${isPaid ? 'completed' : ''} ${isPaying || isVerifying ? 'active' : ''}`}>
               <div className="step-indicator">
                 {isPaying ? (
+                  <div className="step-spinner"/>
+                ) : isVerifying ? (
                   <div className="step-spinner"/>
                 ) : isPaid ? (
                   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
@@ -161,31 +189,56 @@ export function PaywallModal({
                 )}
               </div>
               <div className="step-content">
-                <span className="step-title">Approve Payment</span>
+                <span className="step-title">
+                  {isVerifying ? 'Verifying Payment...' : 'Pay & Generate'}
+                </span>
                 {isPaid && (
-                  <span className="step-subtitle">Payment authorized</span>
+                  <span className="step-subtitle">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <polyline points="20 6 9 17 4 12"/>
+                    </svg>
+                    Payment sent
+                  </span>
+                )}
+                {txHash && (
+                  <a href={explorerUrl!} target="_blank" rel="noopener noreferrer" className="tx-link">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/>
+                      <polyline points="15 3 21 3 21 9"/>
+                      <line x1="10" y1="14" x2="21" y2="3"/>
+                    </svg>
+                    View on Basescan
+                  </a>
                 )}
               </div>
               {isConnected && !isPaid && (
                 <button
                   className="step-action button-primary"
-                  onClick={onMakePayment}
-                  disabled={isPaying}
+                  onClick={onPayAndGenerate}
+                  disabled={isPaying || isVerifying}
                 >
-                  {isPaying ? 'Processing...' : `Pay ${scheme ? formatPrice(scheme.price) : '$0.10'}`}
+                  {isPaying ? 'Sending...' : `Pay ${scheme ? formatPrice(scheme.price) : '$0.10'} & Generate`}
                 </button>
               )}
             </div>
           </div>
 
           {/* Success State */}
-          {isPaid && (
+          {isPaid && !isVerifying && (
             <div className="payment-success">
               <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                 <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
                 <polyline points="22 4 12 14.01 9 11.01"/>
               </svg>
-              <span>Payment successful! Generating your image...</span>
+              <span>Payment verified! Generating your image...</span>
+            </div>
+          )}
+
+          {/* Verifying State */}
+          {isVerifying && (
+            <div className="payment-verifying">
+              <div className="verifying-spinner"/>
+              <span>Verifying transaction on-chain...</span>
             </div>
           )}
 
