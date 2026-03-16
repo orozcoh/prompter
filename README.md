@@ -20,6 +20,8 @@ Free AI image generation platform. Upload a reference image, select a prompt sty
 | Cloudflare R2 | Reference image storage | [developers.cloudflare.com/r2](https://developers.cloudflare.com/r2/) |
 | OpenRouter | AI image generation | [openrouter.ai/docs](https://openrouter.ai/docs) |
 | Bun | Runtime & package manager | [bun.com](https://bun.com/docs) |
+| x402 | Pay per API call | [x402 - Sellers](https://docs.x402.org/getting-started/quickstart-for-sellers#hono) |
+| viem | EVM wallet & signing | [viem.sh](https://viem.sh/) |
 
 ## Quick Start
 
@@ -81,23 +83,46 @@ bucket_name = "prompter-images"
 ```
 
 ### 3. Set Secrets
-Enter each secret after ```wrangler secret put ....```
 
 ```bash
 # OpenRouter API key for image generation
 wrangler secret put OPENROUTER_API_KEY
 
-# Price per generation in USD
-wrangler secret put GENERATION_PRICE_USD
-
 # AI model override (optional)
 wrangler secret put GENERATION_MODEL
-
-# Wallet address for payments
-wrangler secret put RECEIVER_WALLET_ADDRESS
 ```
 
-### 4. Seed Prompt Catalog (Optional)
+### 4. Enable Payments (Optional)
+
+By default, payment validation is bypassed for free local development. To enable real x402 payments:
+
+1. **Create a facilitator wallet** - This wallet pays gas fees to settle payments on-chain
+   ```bash
+   # Generate a new wallet (or use existing one)
+   cast wallet new  # Requires Foundry
+   # Or use any Ethereum wallet generator
+   ```
+
+2. **Fund the wallet with ETH on Base** - The facilitator needs ETH for gas fees (USDC payments go to `X402_PAY_TO_ADDRESS`)
+
+3. **Add the private key to `.env`**:
+   ```env
+   FACILITATOR_PRIVATE_KEY=0x<your-facilitator-wallet-private-key>
+   LOCAL_DEV_BYPASS_PAYMENT=false
+   ```
+
+4. **For Cloudflare deployment**, store the private key as a secret:
+   ```bash
+   wrangler secret put FACILITATOR_PRIVATE_KEY
+   ```
+
+**How it works:**
+- The facilitator is **embedded in the worker** - no separate server needed
+- User signs payment authorization (EIP-3009 `transferWithAuthorization`)
+- Facilitator verifies signature and submits transaction on-chain
+- USDC transfers to `X402_PAY_TO_ADDRESS`, facilitator pays gas
+
+### 5. Seed Prompt Catalog (Optional)
 
 Add prompts to KV:
 
@@ -110,7 +135,7 @@ wrangler kv key put PROMPTS_KV "prompt-1" --value '{
 }'
 ```
 
-### 5. Upload Catalog Images to R2
+### 6. Upload Catalog Images to R2
 
 Place your prompt preview images in the R2 bucket:
 

@@ -2,6 +2,8 @@ import { useState, useEffect, useCallback } from 'react';
 import { ImageUpload } from './components/ImageUpload';
 import { PromptGallery } from './components/PromptGallery';
 import { StatusIndicator, type GenerationStatus } from './components/StatusIndicator';
+import { PaywallModal } from './components/PaywallModal';
+import { useX402Payment } from './hooks/useX402Payment';
 import { extractImageUrl } from './utils/extractImageUrl';
 import './App.css';
 
@@ -27,6 +29,24 @@ function App() {
   const [result, setResult] = useState<GeneratedResult | null>(null);
   const [error, setError] = useState<string | null>(null);
 
+  // x402 payment hook
+  const {
+    isPaying,
+    isPaid,
+    isConnecting,
+    isConnected,
+    error: paymentError,
+    paymentRequired,
+    walletAddress,
+    connectWallet,
+    makePayment,
+    parsePaymentRequired,
+    resetPayment,
+  } = useX402Payment();
+
+  // Track selected prompt for payment
+  const [selectedPromptForPayment, setSelectedPromptForPayment] = useState<Prompt | null>(null);
+
   // Fetch prompts on mount
   useEffect(() => {
     fetchPrompts();
@@ -46,8 +66,10 @@ function App() {
   const handleGenerate = useCallback(async (prompt: Prompt) => {
     setGenerationStatus('generating');
     setError(null);
+    setSelectedPromptForPayment(prompt);
 
     try {
+      // First attempt without payment
       const response = await fetch(`${API_BASE}/generate`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -57,13 +79,22 @@ function App() {
         }),
       });
 
+      // Check if payment is required (402 status)
+      if (response.status === 402) {
+        const paymentReq = await parsePaymentRequired(response);
+        if (paymentReq) {
+          setGenerationStatus('payment_required');
+          return; // Show paywall modal
+        } else {
+          throw new Error('Payment required but could not parse payment details');
+        }
+      }
+
+      // Process successful response
       const data = await response.json();
       if (!data.success) {
         throw new Error(data.error || 'Generation failed');
       }
-
-      // Log full API response for debugging
-      console.log('OpenRouter API response:', data.apiResponse);
 
       // Extract image URL from API response
       const imageUrl = extractImageUrl(data.apiResponse);
@@ -82,7 +113,82 @@ function App() {
       setGenerationStatus('error');
       console.error(err);
     }
-  }, [referenceImage]);
+  }, [referenceImage, parsePaymentRequired]);
+
+  const handleGenerateWithPayment = useCallback(async () => {
+    if (!paymentRequired || !selectedPromptForPayment) return;
+
+    try {
+      // Connect wallet first
+      if (!isConnected || !walletAddress) {
+        await connectWallet();
+      }
+
+      // Define the original request to retry after payment
+      const originalRequest = async () => {
+        return await fetch(`${API_BASE}/generate`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            promptId: selectedPromptForPayment.id,
+            referenceImage,
+          }),
+        });
+      };
+
+      // Make payment and retry request with payment headers
+      const result = await makePayment(paymentRequired, originalRequest);
+
+      if (result.ok) {
+        const data = await result.json();
+        if (!data.success) {
+          throw new Error(data.error || 'Generation failed');
+        }
+
+        const imageUrl = extractImageUrl(data.apiResponse);
+        if (!imageUrl) {
+          throw new Error('No image found in API response');
+        }
+
+        setResult({
+          imageUrl,
+          promptId: selectedPromptForPayment.id,
+        });
+
+        setGenerationStatus('completed');
+        resetPayment();
+        setSelectedPromptForPayment(null);
+      } else if (result.status === 400) {
+        const errorBody = await result.text();
+        console.error('[App] 400 error body:', errorBody);
+        throw new Error(`Payment validation failed: ${errorBody}`);
+      } else if (result.status === 402) {
+        const errorBody = await result.text();
+        console.error('[App] 402 error body:', errorBody);
+        throw new Error(`Payment rejected: ${errorBody}`);
+      } else {
+        throw new Error('Payment processed but generation failed');
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Payment/Generation failed');
+      setGenerationStatus('error');
+      console.error(err);
+    }
+  }, [paymentRequired, selectedPromptForPayment, referenceImage, makePayment, resetPayment, isConnected, walletAddress, connectWallet, extractImageUrl]);
+
+  const handleClosePaywall = useCallback(() => {
+    resetPayment();
+    setSelectedPromptForPayment(null);
+    setGenerationStatus('idle');
+  }, [resetPayment]);
+
+  const handleConnectWallet = useCallback(async () => {
+    try {
+      await connectWallet();
+    } catch (err) {
+      // Error is handled in the hook
+    }
+  }, [connectWallet]);
 
   const downloadImage = async (url: string) => {
     try {
@@ -110,6 +216,8 @@ function App() {
     setResult(null);
     setGenerationStatus('idle');
     setError(null);
+    resetPayment();
+    setSelectedPromptForPayment(null);
   };
 
   return (
@@ -155,6 +263,21 @@ function App() {
             </div>
           </div>
         )}
+
+        {/* Paywall Modal */}
+        <PaywallModal
+          isOpen={generationStatus === 'payment_required'}
+          paymentRequired={paymentRequired}
+          isConnecting={isConnecting}
+          isPaying={isPaying}
+          isConnected={isConnected}
+          isPaid={isPaid}
+          walletAddress={walletAddress}
+          error={paymentError}
+          onConnectWallet={handleConnectWallet}
+          onMakePayment={handleGenerateWithPayment}
+          onClose={handleClosePaywall}
+        />
       </main>
     </div>
   );

@@ -1,11 +1,14 @@
 name = "prompter"
 main = "worker/index.ts"
-compatibility_date = "2024-01-01"
+compatibility_date = "2024-09-23"
 compatibility_flags = ["nodejs_compat"]
 
+# KV namespace for prompt storage
+# Create with: bunx wrangler kv:namespace create PROMPTS_KV
+# Then update the id below with the created namespace ID
 [[kv_namespaces]]
 binding = "PROMPTS_KV"
-id = ""
+id = "placeholder-update-on-deploy"  # Replace with actual KV namespace ID
 
 [[r2_buckets]]
 binding = "IMAGES_R2"
