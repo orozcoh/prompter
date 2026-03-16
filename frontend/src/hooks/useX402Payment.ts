@@ -49,6 +49,7 @@ export interface PaymentState {
   walletAddress: Address | null;
   chainId: number | null;
   txHash: string | null;
+  connectionType: 'injected' | 'walletconnect' | null; // Track connection type
 }
 
 export function useX402Payment() {
@@ -64,10 +65,11 @@ export function useX402Payment() {
     walletAddress: null,
     chainId: null,
     txHash: null,
+    connectionType: null,
   });
 
-  // Connect wallet using viem wallet connectors
-  const connectWallet = useCallback(async () => {
+  // Connect wallet using viem wallet connectors or WalletConnect
+  const connectWallet = useCallback(async (connectionType?: 'injected' | 'walletconnect') => {
     setState(prev => ({ ...prev, isConnecting: true, error: null }));
 
     try {
@@ -76,64 +78,101 @@ export function useX402Payment() {
       }
 
       const { createWalletClient, custom, publicActions } = await import('viem');
-      const ethereum = (window as any).ethereum;
 
-      if (!ethereum) {
-        throw new Error('No Ethereum wallet found. Please install MetaMask or another Web3 wallet.');
-      }
+      // Use WalletConnect if specified or if no injected wallet is available
+      const useWalletConnect = connectionType === 'walletconnect' ||
+        (connectionType === undefined && !(window as any).ethereum);
 
-      const walletClient = createWalletClient({
-        chain: base,
-        transport: custom(ethereum),
-      }).extend(publicActions);
+      if (useWalletConnect) {
+        // Connect using WalletConnect
+        const { connectWalletConnect, getWalletConnectProvider } = await import('../utils/walletConnect');
 
-      const [address] = await walletClient.requestAddresses();
+        const result = await connectWalletConnect();
+        const provider = getWalletConnectProvider();
 
-      if (!address) {
-        throw new Error('No account selected');
-      }
+        if (!provider) {
+          throw new Error('WalletConnect provider not available');
+        }
 
-      const chainId = await walletClient.getChainId();
+        // Create wallet client using WalletConnect provider as custom transport
+        const walletClient = createWalletClient({
+          chain: base,
+          transport: custom(provider as any),
+          account: result.address,
+        }).extend(publicActions);
 
-      if (chainId !== base.id) {
-        try {
-          await ethereum.request({
-            method: 'wallet_switchEthereumChain',
-            params: [{ chainId: `0x${base.id.toString(16)}` }],
-          });
-        } catch (switchError: any) {
-          if (switchError.code === 4902) {
+        setState(prev => ({
+          ...prev,
+          isConnecting: false,
+          isConnected: true,
+          walletAddress: result.address,
+          chainId: base.id,
+          connectionType: 'walletconnect',
+        }));
+
+        return { walletClient, address: result.address, provider };
+      } else {
+        // Connect using injected wallet
+        const ethereum = (window as any).ethereum;
+
+        if (!ethereum) {
+          throw new Error('No Ethereum wallet found. Please install MetaMask or use WalletConnect.');
+        }
+
+        const walletClient = createWalletClient({
+          chain: base,
+          transport: custom(ethereum),
+        }).extend(publicActions);
+
+        const [address] = await walletClient.requestAddresses();
+
+        if (!address) {
+          throw new Error('No account selected');
+        }
+
+        const chainId = await walletClient.getChainId();
+
+        if (chainId !== base.id) {
+          try {
             await ethereum.request({
-              method: 'wallet_addEthereumChain',
-              params: [
-                {
-                  chainId: `0x${base.id.toString(16)}`,
-                  chainName: 'Base Mainnet',
-                  nativeCurrency: {
-                    name: 'Ethereum',
-                    symbol: 'ETH',
-                    decimals: 18,
-                  },
-                  rpcUrls: ['https://mainnet.base.org'],
-                  blockExplorerUrls: ['https://basescan.org'],
-                },
-              ],
+              method: 'wallet_switchEthereumChain',
+              params: [{ chainId: `0x${base.id.toString(16)}` }],
             });
-          } else {
-            throw new Error('Please switch to Base Mainnet network');
+          } catch (switchError: any) {
+            if (switchError.code === 4902) {
+              await ethereum.request({
+                method: 'wallet_addEthereumChain',
+                params: [
+                  {
+                    chainId: `0x${base.id.toString(16)}`,
+                    chainName: 'Base Mainnet',
+                    nativeCurrency: {
+                      name: 'Ethereum',
+                      symbol: 'ETH',
+                      decimals: 18,
+                    },
+                    rpcUrls: ['https://mainnet.base.org'],
+                    blockExplorerUrls: ['https://basescan.org'],
+                  },
+                ],
+              });
+            } else {
+              throw new Error('Please switch to Base Mainnet network');
+            }
           }
         }
+
+        setState(prev => ({
+          ...prev,
+          isConnecting: false,
+          isConnected: true,
+          walletAddress: address,
+          chainId: base.id,
+          connectionType: 'injected',
+        }));
+
+        return { walletClient, address };
       }
-
-      setState(prev => ({
-        ...prev,
-        isConnecting: false,
-        isConnected: true,
-        walletAddress: address,
-        chainId: base.id,
-      }));
-
-      return { walletClient, address };
     } catch (error) {
       setState(prev => ({
         ...prev,
@@ -186,12 +225,32 @@ export function useX402Payment() {
         address = state.walletAddress;
       }
 
+      // Get the appropriate provider based on connection type
+      let provider: any;
+      if (state.connectionType === 'walletconnect') {
+        const { getWalletConnectProvider } = await import('../utils/walletConnect');
+        provider = getWalletConnectProvider();
+        if (!provider) {
+          throw new Error('WalletConnect provider not available');
+        }
+      } else {
+        provider = (window as any).ethereum;
+        if (!provider) {
+          throw new Error('No Ethereum provider found');
+        }
+      }
+
       const { createWalletClient, custom, publicActions } = await import('viem');
-      const ethereum = (window as any).ethereum;
+
+      // For WalletConnect, ensure we're on Base chain before creating client
+      if (state.connectionType === 'walletconnect') {
+        const { ensureBaseChain } = await import('../utils/walletConnect');
+        await ensureBaseChain();
+      }
 
       const walletClient = createWalletClient({
         chain: base,
-        transport: custom(ethereum),
+        transport: custom(provider),
         account: address,
       }).extend(publicActions);
 
@@ -205,7 +264,6 @@ export function useX402Payment() {
           args: [paymentDetails.payTo, BigInt(paymentDetails.amount)],
         });
       } catch (simError: any) {
-        console.warn('Transaction simulation failed:', simError);
         // Continue anyway - simulation can fail for various reasons
       }
 
@@ -234,7 +292,7 @@ export function useX402Payment() {
       }));
       throw error;
     }
-  }, [state.isConnected, state.walletAddress, connectWallet]);
+  }, [state.isConnected, state.walletAddress, state.connectionType, connectWallet]);
 
   // Verify payment with worker
   const verifyPayment = useCallback(async (
@@ -295,13 +353,33 @@ export function useX402Payment() {
         address = state.walletAddress;
       }
 
+      // Get the appropriate provider based on connection type
+      let provider: any;
+      if (state.connectionType === 'walletconnect') {
+        const { getWalletConnectProvider } = await import('../utils/walletConnect');
+        provider = getWalletConnectProvider();
+        if (!provider) {
+          throw new Error('WalletConnect provider not available');
+        }
+      } else {
+        provider = (window as any).ethereum;
+        if (!provider) {
+          throw new Error('No Ethereum provider found');
+        }
+      }
+
+      // For WalletConnect, ensure we're on Base chain before creating client
+      if (state.connectionType === 'walletconnect') {
+        const { ensureBaseChain } = await import('../utils/walletConnect');
+        await ensureBaseChain();
+      }
+
       // Create viem wallet client for signing with public actions
       const { createWalletClient, custom, publicActions } = await import('viem');
-      const ethereum = (window as any).ethereum;
 
       const walletClient = createWalletClient({
         chain: base,
-        transport: custom(ethereum),
+        transport: custom(provider),
         account: address,
       }).extend(publicActions);
 
@@ -395,7 +473,7 @@ export function useX402Payment() {
       }));
       throw error;
     }
-  }, [state.isConnected, state.walletAddress, state.rawPaymentRequired, connectWallet]);
+  }, [state.isConnected, state.walletAddress, state.connectionType, state.rawPaymentRequired, connectWallet]);
 
   // Format payment required response to our interface
   const formatPaymentRequired = (data: any): PaymentRequiredResponse => {
@@ -444,7 +522,7 @@ export function useX402Payment() {
           decoded = JSON.parse(atob(paymentRequiredHeaderUpper));
           parsed = formatPaymentRequired(decoded);
         } catch (err) {
-          console.error('Failed to decode PAYMENT-REQUIRED header:', err);
+          // Ignore decoding errors
         }
       }
 
@@ -476,7 +554,6 @@ export function useX402Payment() {
 
       return null;
     } catch (err) {
-      console.error('[parsePaymentRequired] Error:', err);
       return null;
     }
   }, []);
@@ -503,8 +580,16 @@ export function useX402Payment() {
       isPaid: false,
       walletAddress: null,
       chainId: null,
+      connectionType: null,
     }));
-  }, []);
+
+    // Disconnect WalletConnect if it was used
+    if (state.connectionType === 'walletconnect') {
+      import('../utils/walletConnect').then(({ disconnectWalletConnect }) => {
+        disconnectWalletConnect();
+      });
+    }
+  }, [state.connectionType]);
 
   return {
     ...state,

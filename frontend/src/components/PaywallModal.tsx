@@ -12,7 +12,7 @@ interface PaywallModalProps {
   walletAddress: string | null;
   txHash: string | null;
   error: string | null;
-  onConnectWallet: () => Promise<void>;
+  onConnectWallet: () => void;
   onPayAndGenerate: () => Promise<void>;
   onClose: () => void;
 }

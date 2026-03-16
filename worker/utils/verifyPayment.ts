@@ -71,7 +71,7 @@ export async function verifyPayment(
 
   // Retry logic: wait for transaction to be mined
   const maxRetries = 5;
-  const retryDelayMs = 2000; // 2 seconds between retries
+  const retryDelayMs = 2500; // 2.5 seconds between retries
 
   for (let attempt = 0; attempt < maxRetries; attempt++) {
     try {

@@ -10,7 +10,6 @@ export type Env = {
   GENERATION_MODEL?: string;
   X402_PRICE_USD: string;
   X402_PAY_TO_ADDRESS: string;
-  X402_FACILITATOR_URL?: string;
   LOCAL_DEV_BYPASS_PAYMENT?: string;
   BASE_RPC_URL?: string;
   MIN_CONFIRMATIONS?: string;

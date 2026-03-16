@@ -3,6 +3,7 @@ import { ImageUpload } from './components/ImageUpload';
 import { PromptGallery } from './components/PromptGallery';
 import { StatusIndicator, type GenerationStatus } from './components/StatusIndicator';
 import { PaywallModal } from './components/PaywallModal';
+import { WalletSelectionModal } from './components/WalletSelectionModal';
 import { useX402Payment } from './hooks/useX402Payment';
 import { extractImageUrl } from './utils/extractImageUrl';
 import './App.css';
@@ -50,6 +51,15 @@ function App() {
   // Track selected prompt for payment
   const [selectedPromptForPayment, setSelectedPromptForPayment] = useState<Prompt | null>(null);
 
+  // Track wallet selection modal
+  const [showWalletSelection, setShowWalletSelection] = useState(false);
+  const [hasInjectedWallet, setHasInjectedWallet] = useState(false);
+
+  // Detect injected wallet on mount
+  useEffect(() => {
+    setHasInjectedWallet(!!(typeof window !== 'undefined' && (window as any).ethereum));
+  }, []);
+
   // Fetch prompts on mount
   useEffect(() => {
     fetchPrompts();
@@ -62,7 +72,6 @@ function App() {
       setPrompts(data.prompts || []);
     } catch (err) {
       setError('Failed to load prompts');
-      console.error(err);
     }
   };
 
@@ -113,7 +122,6 @@ function App() {
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Generation failed');
       setGenerationStatus('error');
-      console.error(err);
     }
   }, [referenceImage, parsePaymentRequired]);
 
@@ -121,11 +129,6 @@ function App() {
     if (!paymentRequired || !selectedPromptForPayment) return;
 
     try {
-      // Connect wallet first
-      if (!isConnected || !walletAddress) {
-        await connectWallet();
-      }
-
       // Get payment details from the scheme
       const scheme = paymentRequired.schemes[0];
       if (!scheme || !scheme.payTo || !scheme.amount) {
@@ -167,9 +170,8 @@ function App() {
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Payment/Generation failed');
       setGenerationStatus('error');
-      console.error(err);
     }
-  }, [paymentRequired, selectedPromptForPayment, referenceImage, signAndSendTransaction, verifyPayment, resetPayment, isConnected, walletAddress, connectWallet, extractImageUrl]);
+  }, [paymentRequired, selectedPromptForPayment, referenceImage, signAndSendTransaction, verifyPayment, resetPayment, extractImageUrl]);
 
   const handleClosePaywall = useCallback(() => {
     resetPayment();
@@ -177,13 +179,30 @@ function App() {
     setGenerationStatus('idle');
   }, [resetPayment]);
 
-  const handleConnectWallet = useCallback(async () => {
+  const handleConnectWallet = async () => {
+    // Show wallet selection modal
+    setShowWalletSelection(true);
+  };
+
+  const handleSelectWallet = async (type: 'injected' | 'walletconnect') => {
     try {
-      await connectWallet();
+      // Close wallet selection modal before opening WalletConnect modal
+      if (type === 'walletconnect') {
+        setShowWalletSelection(false);
+      }
+      await connectWallet(type);
+      // Close modal on success (for injected wallet)
+      if (type !== 'walletconnect') {
+        setShowWalletSelection(false);
+      }
     } catch (err) {
-      // Error is handled in the hook
+      // Error is handled in the hook - keep modal open for retry
     }
-  }, [connectWallet]);
+  };
+
+  const handleCloseWalletSelection = useCallback(() => {
+    setShowWalletSelection(false);
+  }, []);
 
   const downloadImage = async (url: string) => {
     try {
@@ -198,7 +217,7 @@ function App() {
       document.body.removeChild(link);
       URL.revokeObjectURL(blobUrl);
     } catch (err) {
-      console.error('Download failed:', err);
+      // Silently ignore download errors
     }
   };
 
@@ -274,6 +293,15 @@ function App() {
           onConnectWallet={handleConnectWallet}
           onPayAndGenerate={handleGenerateWithPayment}
           onClose={handleClosePaywall}
+        />
+
+        {/* Wallet Selection Modal */}
+        <WalletSelectionModal
+          isOpen={showWalletSelection}
+          isConnecting={isConnecting}
+          hasInjectedWallet={hasInjectedWallet}
+          onSelectWallet={handleSelectWallet}
+          onClose={handleCloseWalletSelection}
         />
       </main>
     </div>

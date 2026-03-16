@@ -13,6 +13,14 @@
   --error: #f44336;
 }
 
+/* Ensure WalletConnect modal appears above all overlays */
+w3m-modal,
+wc-modal,
+walletconnect-modal,
+[data-wcm-modal] {
+  z-index: 10000 !important;
+}
+
 * {
   box-sizing: border-box;
 }

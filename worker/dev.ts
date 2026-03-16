@@ -134,7 +134,6 @@ const env = {
   GENERATION_MODEL: process.env.GENERATION_MODEL || 'sourceful/riverflow-v2-fast-preview',
   X402_PRICE_USD: process.env.X402_PRICE_USD || '0.001',
   X402_PAY_TO_ADDRESS: process.env.X402_PAY_TO_ADDRESS || '0x7B3193eEb2d754d126b70A1F184659D52740D306',
-  X402_FACILITATOR_URL: process.env.X402_FACILITATOR_URL,
   LOCAL_DEV_BYPASS_PAYMENT: process.env.LOCAL_DEV_BYPASS_PAYMENT || 'true',
   BASE_RPC_URL: process.env.BASE_RPC_URL || 'https://mainnet.base.org',
   MIN_CONFIRMATIONS: process.env.MIN_CONFIRMATIONS || '3',
@@ -162,6 +161,6 @@ console.log(`   - BASE_RPC_URL: ${env.BASE_RPC_URL}`);
 console.log(`   - MIN_CONFIRMATIONS: ${env.MIN_CONFIRMATIONS}`);
 console.log(`   - LOCAL_DEV_BYPASS_PAYMENT: ${env.LOCAL_DEV_BYPASS_PAYMENT}${env.LOCAL_DEV_BYPASS_PAYMENT === 'true' ? ' (payment validation bypassed)' : ' (payment validation ENABLED)'}`);
 console.log(`\n🔐 To enable real payments:`);
-console.log(`   1. Add FACILITATOR_PRIVATE_KEY to .env (wallet for gas fees)`);
-console.log(`   2. Set LOCAL_DEV_BYPASS_PAYMENT=false`);
-console.log(`   3. Fund the facilitator wallet with ETH on Base`);
+console.log(`   1. Set LOCAL_DEV_BYPASS_PAYMENT=false`);
+console.log(`   2. Users pay USDC directly to X402_PAY_TO_ADDRESS`);
+console.log(`   3. Worker verifies payments on-chain via Base RPC`);
