@@ -107,13 +107,21 @@ async function generateImage(
     return c.json({ error: `OpenRouter API error: ${error}` }, 500);
   }
 
-  const result = await openrouterResponse.json();
+  const result = (await openrouterResponse.json()) as any;
 
-  // Return full API response to client for processing
+  // Log cost for internal monitoring
+  if (result.usage && typeof result.usage.cost === 'number') {
+    console.log(`     -> cost: ${result.usage.cost} usd`);
+  }
+
+  // Strip usage from apiResponse to protect IP/token details
+  const { usage, ...cleanedResult } = result;
+
+  // Return cleaned API response to client for processing
   const response: any = {
     success: true,
     promptId,
-    apiResponse: result,
+    apiResponse: cleanedResult,
   };
 
   // Add payment info if provided (for verified payments)

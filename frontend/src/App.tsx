@@ -4,6 +4,7 @@ import { PromptGallery } from './components/PromptGallery';
 import { StatusIndicator, type GenerationStatus } from './components/StatusIndicator';
 import { PaywallModal } from './components/PaywallModal';
 import { WalletSelectionModal } from './components/WalletSelectionModal';
+import Header from './components/Header';
 import { useX402Payment } from './hooks/useX402Payment';
 import { extractImageUrl } from './utils/extractImageUrl';
 import './App.css';
@@ -236,10 +237,7 @@ function App() {
 
   return (
     <div className="app">
-      <header className="app-header">
-        <h1>Prompter</h1>
-        <p className="tagline">Transform your images with AI</p>
-      </header>
+      <Header onMenuClick={() => console.log('Menu clicked')} />
 
       <main className="app-main">
         <div className="upload-section">
