@@ -137,15 +137,16 @@ app.get('/health', (c) => {
 // Get all prompts from KV
 app.get('/prompts', async (c) => {
   const keys = await c.env.PROMPTS_KV.list();
-  const prompts: Array<{ id: string } & PromptData> = [];
+  const prompts: Array<Omit<PromptData, 'prompt' & { id: string }>> = [];
 
   for (const key of keys.keys) {
     const prompt = await c.env.PROMPTS_KV.get(key.name, 'json') as PromptData | null;
     if (prompt) {
+      const { prompt: _, ...publicPrompt } = prompt;
       prompts.push({
         id: key.name,
-        ...prompt,
-      });
+        ...publicPrompt,
+      } as any);
     }
   }
 
@@ -161,7 +162,8 @@ app.get('/prompts/:id', async (c) => {
     return c.json({ error: 'Prompt not found' }, 404);
   }
 
-  return c.json({ id, ...prompt });
+  const { prompt: _, ...publicPrompt } = prompt;
+  return c.json({ id, ...publicPrompt });
 });
 
 // Generate image - returns payment info if no txHash provided
@@ -198,7 +200,7 @@ app.post('/generate', async (c) => {
     return c.json(
       {
         error: 'Payment required',
-        ...paymentData,
+        paymentData: paymentData,
       },
       {
         status: 402,

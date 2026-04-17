@@ -124,6 +124,12 @@ const seedPrompts = async (kv: MemoryKV) => {
     imageUrl: 'https://picsum.photos/seed/anime/400/400',
   }));
 
+    await kv.put('prompt-4', JSON.stringify({
+    name: 'Carved Portrait',
+    prompt: 'Convert the reference subject into an engraved contour line illustration drawn with dense black ink lines. Shading created only with curved line density like traditional etching. Background is warm beige handmade rice paper with subtle fiber texture. Monochrome black ink on rice paper aesthetic.',
+    category: 'front-face',
+    imageUrl: 'https://picsum.photos/seed/anime/400/400',
+  }));
 };
 
 // Create mock environment
