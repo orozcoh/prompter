@@ -178,6 +178,7 @@ const AppContent = () => {
   const handleClosePaywall = useCallback(() => {
     resetPayment();
     setSelectedPromptForPayment(null);
+    setSelectedPrompt(null);
     setGenerationStatus('idle');
   }, [resetPayment]);
 
@@ -240,6 +241,7 @@ const AppContent = () => {
     setError(null);
     resetPayment();
     setSelectedPromptForPayment(null);
+    setSelectedPrompt(null);
   };
 
   return (
