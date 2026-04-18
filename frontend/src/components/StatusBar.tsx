@@ -44,7 +44,7 @@ export function StatusBar({ onConnectClick }: StatusBarProps) {
                 🚪
               </button>
             </>
-          ) : 'Not connected'}
+          ) : <span style={{cursor: "pointer"}}>Not connected</span>}
         </span>
       </div>
     </div>
