@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import { type Address, encodeFunctionData, parseAbi, type Hash } from 'viem';
 import { base } from 'viem/chains';
 import { x402Client, x402HTTPClient } from '@x402/fetch';
@@ -61,12 +61,91 @@ export function useX402Payment() {
     isVerifying: false,
     error: null,
     paymentRequired: null,
-    rawPaymentRequired: null,
+    rawPaymentRequired: null, // Store raw decoded PAYMENT-REQUIRED header
     walletAddress: null,
     chainId: null,
     txHash: null,
-    connectionType: null,
+    connectionType: null, // Track connection type
   });
+
+  // Ref to track if recovery has been attempted (prevents infinite loops)
+  const recoveryAttempted = useRef(false);
+
+  // Reset recovery attempt flag (for reconnection after disconnect)
+  const resetRecoveryAttempt = useCallback(() => {
+    recoveryAttempted.current = false;
+  }, []);
+
+  // Attempt to recover connection on mount
+  useEffect(() => {
+    // Skip if already attempted recovery
+    if (recoveryAttempted.current) {
+      return;
+    }
+    recoveryAttempted.current = true;
+
+    const recoverConnection = async () => {
+      try {
+        // 1. Try Injected Wallet first
+        const ethereum = (window as any).ethereum;
+        if (ethereum) {
+          // Use eth_accounts to check for existing authorization without a popup
+          let accounts = await ethereum.request({ method: 'eth_accounts' }).catch(() => []);
+          
+          if (accounts && accounts.length > 0) {
+            const chainId = await ethereum.request({ method: 'eth_chainId' }).catch(() => '0x2105');
+            setState(prev => ({
+              ...prev,
+              isConnected: true,
+              walletAddress: accounts[0],
+              chainId: typeof chainId === 'string' ? parseInt(chainId, 16) : chainId,
+              connectionType: 'injected',
+            }));
+            return;
+          }
+        }
+
+        // 2. Try WalletConnect
+        const { getWalletConnectProvider, connectWalletConnect } = await import('../utils/walletConnect');
+        const provider = getWalletConnectProvider();
+        
+        if (provider && provider.accounts && provider.accounts.length > 0) {
+          // WalletConnect already has a session, use it
+          setState(prev => ({
+            ...prev,
+            isConnected: true,
+            walletAddress: provider.accounts[0] as Address,
+            chainId: provider.chainId,
+            connectionType: 'walletconnect',
+          }));
+          return;
+        }
+
+        // No provider found, try to initialize silently
+        try {
+          // Attempt to re-initialize WalletConnect silently to restore session
+          const result = await connectWalletConnect({ showQrModal: false });
+          
+          if (result.provider && result.provider.accounts && result.provider.accounts.length > 0) {
+            setState(prev => ({
+              ...prev,
+              isConnected: true,
+              walletAddress: result.provider.accounts[0] as Address,
+              chainId: result.provider.chainId,
+              connectionType: 'walletconnect',
+            }));
+          }
+        } catch (e) {
+          // Silently fail if no session to restore
+          console.debug('WalletConnect session restore failed:', e);
+        }
+      } catch (err) {
+        console.error('Failed to recover wallet connection:', err);
+      }
+    };
+
+    recoverConnection();
+  }, []);
 
   // Connect wallet using viem wallet connectors or WalletConnect
   const connectWallet = useCallback(async (connectionType?: 'injected' | 'walletconnect') => {
@@ -582,6 +661,9 @@ export function useX402Payment() {
       chainId: null,
       connectionType: null,
     }));
+
+    // Reset recovery attempt flag so user can reconnect
+    recoveryAttempted.current = false;
 
     // Disconnect WalletConnect if it was used
     if (state.connectionType === 'walletconnect') {

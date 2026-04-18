@@ -24,7 +24,7 @@ export interface WalletConnectResult {
  * Initialize and connect WalletConnect
  * Displays QR code for wallet scanning
  */
-export async function connectWalletConnect(): Promise<WalletConnectResult> {
+export async function connectWalletConnect(options: { showQrModal?: boolean } = {}): Promise<WalletConnectResult> {
   try {
     // Initialize provider if not already initialized
     if (!walletConnectProvider) {
@@ -32,7 +32,7 @@ export async function connectWalletConnect(): Promise<WalletConnectResult> {
         projectId: PROJECT_ID,
         chains: REQUIRED_CHAINS,
         optionalChains: OPTIONAL_CHAINS as [number, ...number[]],
-        showQrModal: true,
+        showQrModal: options.showQrModal ?? true,
         qrModalOptions: {
           themeMode: 'dark',
           themeVariables: {

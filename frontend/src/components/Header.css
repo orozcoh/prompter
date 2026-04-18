@@ -17,6 +17,10 @@
   align-items: center;
 }
 
+.header-left {
+  gap: 1rem;
+}
+
 .header-right {
   justify-content: flex-end;
 }
