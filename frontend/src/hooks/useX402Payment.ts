@@ -147,6 +147,7 @@ export function useX402Payment() {
     recoverConnection();
   }, []);
 
+
   // Connect wallet using viem wallet connectors or WalletConnect
   const connectWallet = useCallback(async (connectionType?: 'injected' | 'walletconnect') => {
     setState(prev => ({ ...prev, isConnecting: true, error: null }));
@@ -672,6 +673,32 @@ export function useX402Payment() {
       });
     }
   }, [state.connectionType]);
+
+  // Listen for account changes in injected wallets
+  useEffect(() => {
+    const ethereum = (window as any).ethereum;
+    if (!ethereum || state.connectionType !== 'injected') {
+      return;
+    }
+
+    const handleAccountsChanged = (accounts: string[]) => {
+      if (accounts.length === 0) {
+        disconnectWallet();
+      } else {
+        console.log("Accounts:", accounts)
+        setState(prev => ({
+          ...prev,
+          walletAddress: accounts[0] as Address,
+        }));
+      }
+    };
+
+    ethereum.on('accountsChanged', handleAccountsChanged);
+
+    return () => {
+      ethereum.removeListener('accountsChanged', handleAccountsChanged);
+    };
+  }, [state.connectionType, disconnectWallet]);
 
   return {
     ...state,
