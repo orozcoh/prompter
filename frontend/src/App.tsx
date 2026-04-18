@@ -5,7 +5,7 @@ import { StatusIndicator, type GenerationStatus } from './components/StatusIndic
 import { PaywallModal } from './components/PaywallModal';
 import { WalletSelectionModal } from './components/WalletSelectionModal';
 import Header from './components/Header';
-import { useX402Payment } from './hooks/useX402Payment';
+import { useWallet, WalletProvider } from './context/WalletContext';
 import { extractImageUrl } from './utils/extractImageUrl';
 import './App.css';
 
@@ -23,7 +23,7 @@ interface GeneratedResult {
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8787';
 
-function App() {
+const AppContent = () => {
   const [referenceImage, setReferenceImage] = useState<string>('');
   const [prompts, setPrompts] = useState<Prompt[]>([]);
   const [selectedPrompt, setSelectedPrompt] = useState<Prompt | null>(null);
@@ -31,7 +31,7 @@ function App() {
   const [result, setResult] = useState<GeneratedResult | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  // x402 payment hook
+  // x402 payment hook from context
   const {
     isPaying,
     isPaid,
@@ -47,7 +47,8 @@ function App() {
     verifyPayment,
     parsePaymentRequired,
     resetPayment,
-  } = useX402Payment();
+    disconnectWallet,
+  } = useWallet();
 
   // Track selected prompt for payment
   const [selectedPromptForPayment, setSelectedPromptForPayment] = useState<Prompt | null>(null);
@@ -185,6 +186,12 @@ function App() {
     setShowWalletSelection(true);
   };
 
+  const handleStatusBarClick = () => {
+    if (!isConnected) {
+      setShowWalletSelection(true);
+    }
+  };
+
   const handleSelectWallet = async (type: 'injected' | 'walletconnect') => {
     try {
       // Close wallet selection modal before opening WalletConnect modal
@@ -237,7 +244,7 @@ function App() {
 
   return (
     <div className="app">
-      <Header onMenuClick={() => console.log('Menu clicked')} />
+      <Header onMenuClick={() => console.log('Menu clicked')} onConnectClick={handleStatusBarClick} />
 
       <main className="app-main">
         <div className="upload-section">
@@ -303,6 +310,14 @@ function App() {
         />
       </main>
     </div>
+  );
+}
+
+function App() {
+  return (
+    <WalletProvider>
+      <AppContent />
+    </WalletProvider>
   );
 }
 

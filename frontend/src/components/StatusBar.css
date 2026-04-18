@@ -1,0 +1,47 @@
+.status-bar {
+  display: flex;
+  align-items: center;
+  padding: 0 1rem;
+  font-size: 0.875rem;
+  color: #9ca3af; /* gray-400 */
+}
+
+.status-bar-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+
+.dot-green {
+  background-color: #10b981; /* emerald-500 */
+}
+
+.dot-gray {
+  background-color: #6b7280; /* gray-500 */
+}
+
+.status-text {
+  font-family: monospace;
+  width: max-content;
+}
+
+.disconnect-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0 0.25rem;
+  font-size: 1rem;
+  color: #9ca3af;
+  transition: color 0.2s ease;
+  margin-left: 0.25rem;
+}
+
+.disconnect-btn:hover {
+  color: #ef4444;
+}
