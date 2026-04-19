@@ -7,7 +7,7 @@ import { serve } from 'bun';
 import app from './index';
 
 // In-memory KV mock
-class MemoryKV implements KVNamespace {
+class MemoryKV {
   private store = new Map<string, string>();
 
   async get(key: string, type?: 'json'): Promise<any> {
@@ -43,7 +43,7 @@ class MemoryKV implements KVNamespace {
 }
 
 // In-memory R2 mock
-class MemoryR2 implements R2Bucket {
+class MemoryR2 {
   private store = new Map<string, R2Object & { data: ArrayBuffer }>();
 
   async get(key: string): Promise<R2ObjectBody | null> {
@@ -101,35 +101,40 @@ class MemoryR2 implements R2Bucket {
   resumeMultipartUpload() { throw new Error('Not implemented'); }
 }
 
-// Seed some sample prompts
+// Seed prompts from prompts.json or fallback to samples
 const seedPrompts = async (kv: MemoryKV) => {
-  await kv.put('prompt-1', JSON.stringify({
-    name: 'Cyberpunk Portrait',
-    prompt: 'Transform into a cyberpunk character with neon lights and futuristic implants',
-    category: 'front-face',
-    imageUrl: 'https://picsum.photos/seed/cyberpunk/400/400',
-  }));
-
-  await kv.put('prompt-2', JSON.stringify({
-    name: 'Fantasy Warrior',
-    prompt: 'Transform into a medieval fantasy warrior in full armor',
-    category: 'full-body',
-    imageUrl: 'https://picsum.photos/seed/warrior/400/400',
-  }));
-
-  await kv.put('prompt-3', JSON.stringify({
-    name: 'Anime Style',
-    prompt: 'Transform into an anime character with big expressive eyes',
-    category: 'front-face',
-    imageUrl: 'https://picsum.photos/seed/anime/400/400',
-  }));
-
-    await kv.put('prompt-4', JSON.stringify({
-    name: 'Carved Portrait',
-    prompt: 'Convert the reference subject into an engraved contour line illustration drawn with dense black ink lines. Shading created only with curved line density like traditional etching. Background is warm beige handmade rice paper with subtle fiber texture. Monochrome black ink on rice paper aesthetic.',
-    category: 'front-face',
-    imageUrl: 'https://picsum.photos/seed/anime/400/400',
-  }));
+  try {
+    const file = Bun.file('prompts.json');
+    if (!(await file.exists())) {
+      throw new Error('File does not exist');
+    }
+    const promptsData = await file.json();
+    
+    for (const prompt of promptsData) {
+      const key = `prompt-${prompt['prompt-id']}`;
+      await kv.put(key, JSON.stringify({
+        name: prompt.name,
+        prompt: prompt.prompt,
+        category: prompt.category,
+        imageUrl: prompt.imageUrl,
+      }));
+    }
+    console.log(`✅ Seeded ${promptsData.length} prompts from prompts.json`);
+  } catch (error) {
+    console.log('📝 prompts.json not found or invalid, using sample prompts');
+    await kv.put('prompt-1', JSON.stringify({
+      name: 'Cyberpunk Portrait',
+      prompt: 'Transform into a cyberpunk character with neon lights and futuristic implants',
+      category: 'front-face',
+      imageUrl: 'https://picsum.photos/seed/cyberpunk/400/400',
+    }));
+    await kv.put('prompt-2', JSON.stringify({
+      name: 'Fantasy Warrior',
+      prompt: 'Transform into a medieval fantasy warrior in full armor',
+      category: 'full-body',
+      imageUrl: 'https://picsum.photos/seed/warrior/400/400',
+    }));
+  }
 };
 
 // Create mock environment
@@ -151,7 +156,7 @@ await seedPrompts(env.PROMPTS_KV as MemoryKV);
 // Start server
 const server = serve({
   port: 8787,
-  fetch: (req) => app.fetch(req, env),
+  fetch: (req) => app.fetch(req, env as any),
 });
 
 console.log(`🚀 Local dev server running at http://localhost:${server.port}`);
