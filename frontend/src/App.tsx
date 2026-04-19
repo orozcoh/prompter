@@ -195,17 +195,22 @@ const AppContent = () => {
 
   const handleSelectWallet = async (type: 'injected' | 'walletconnect') => {
     try {
-      // Close wallet selection modal before opening WalletConnect modal
-      if (type === 'walletconnect') {
+      // For injected wallets, we can close the selection modal immediately
+      if (type === 'injected') {
         setShowWalletSelection(false);
       }
+      
+      // For WalletConnect, we keep the selection modal open (or in loading state)
+      // until the WalletConnect QR modal is triggered.
       await connectWallet(type);
-      // Close modal on success (for injected wallet)
-      if (type !== 'walletconnect') {
+      
+      // Close modal on success for injected wallets
+      if (type === 'injected') {
         setShowWalletSelection(false);
       }
     } catch (err) {
       // Error is handled in the hook - keep modal open for retry
+      console.error('Wallet connection failed:', err);
     }
   };
 

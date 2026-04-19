@@ -24,15 +24,18 @@ export interface WalletConnectResult {
  * Initialize and connect WalletConnect
  * Displays QR code for wallet scanning
  */
-export async function connectWalletConnect(options: { showQrModal?: boolean } = {}): Promise<WalletConnectResult> {
+export async function connectWalletConnect(options: { showQrModal?: boolean; skipConnect?: boolean } = {}): Promise<WalletConnectResult> {
   try {
-    // Initialize provider if not already initialized
+        // Initialize provider if not already initialized, or if we need to change the QR modal setting
+    // (e.g. if it was initialized silently for recovery but now the user wants to connect manually)
+    const shouldShowQr = options.showQrModal ?? true;
+    
     if (!walletConnectProvider) {
       walletConnectProvider = await EthereumProvider.init({
         projectId: PROJECT_ID,
         chains: REQUIRED_CHAINS,
         optionalChains: OPTIONAL_CHAINS as [number, ...number[]],
-        showQrModal: options.showQrModal ?? true,
+        showQrModal: shouldShowQr,
         qrModalOptions: {
           themeMode: 'dark',
           themeVariables: {
@@ -52,10 +55,14 @@ export async function connectWalletConnect(options: { showQrModal?: boolean } = 
     const provider = walletConnectProvider;
 
     // Call connect() first to show QR modal and establish connection
-    if (!provider.connected) {
-      await provider.connect({
-        optionalChains: OPTIONAL_CHAINS,
-      });
+    if (!provider.connected && !options.skipConnect) {
+      try {
+        await provider.connect({
+          optionalChains: OPTIONAL_CHAINS,
+        });
+      } catch (connectError) {
+        throw connectError;
+      }
     }
 
     // Get accounts from the connected provider

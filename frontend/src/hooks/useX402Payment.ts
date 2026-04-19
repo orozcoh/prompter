@@ -123,8 +123,9 @@ export function useX402Payment() {
 
         // No provider found, try to initialize silently
         try {
-          // Attempt to re-initialize WalletConnect silently to restore session
-          const result = await connectWalletConnect({ showQrModal: false });
+          // We now initialize with showQrModal: true to avoid core re-initialization issues,
+          // and use skipConnect: true so the modal doesn't pop up on page refresh.
+          const result = await connectWalletConnect({ showQrModal: true, skipConnect: true });
           
           if (result.provider && result.provider.accounts && result.provider.accounts.length > 0) {
             setState(prev => ({
