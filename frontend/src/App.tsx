@@ -47,7 +47,6 @@ const AppContent = () => {
     verifyPayment,
     parsePaymentRequired,
     resetPayment,
-    disconnectWallet,
   } = useWallet();
 
   // Track selected prompt for payment

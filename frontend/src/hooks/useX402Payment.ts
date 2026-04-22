@@ -72,9 +72,7 @@ export function useX402Payment() {
   const recoveryAttempted = useRef(false);
 
   // Reset recovery attempt flag (for reconnection after disconnect)
-  const resetRecoveryAttempt = useCallback(() => {
-    recoveryAttempted.current = false;
-  }, []);
+  // This is handled internally by disconnectWallet
 
   // Attempt to recover connection on mount
   useEffect(() => {
