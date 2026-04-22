@@ -8,7 +8,7 @@ compatibility_flags = ["nodejs_compat"]
 # Then update the id below with the created namespace ID
 [[kv_namespaces]]
 binding = "PROMPTS_KV"
-id = "placeholder-update-on-deploy"  # Replace with actual KV namespace ID
+id = "0c92dbff33824820890d7b92384856a6"
 
 [[r2_buckets]]
 binding = "IMAGES_R2"

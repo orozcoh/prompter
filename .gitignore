@@ -35,3 +35,16 @@ report.[0-9]_.[0-9]_.[0-9]_.[0-9]_.json
 
 # Private prompts file
 prompts.json
+
+
+# Wrangler specific
+.wrangler/
+.dev.vars
+dist/
+build/
+
+# Environment & Secrets (Optional but recommended for public repos)
+# wrangler.toml
+# .env
+
+frontend/.env.production
