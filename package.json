@@ -22,7 +22,11 @@
   },
   "dependencies": {
     "@cloudflare/workers-types": "^4.20260313.1",
+    "@x402/core": "^2.6.0",
+    "@x402/evm": "^2.6.0",
+    "@x402/hono": "^2.6.0",
     "hono": "^4.8.5",
+    "viem": "^2.47.4",
     "wrangler": "^4.73.0"
   }
 }

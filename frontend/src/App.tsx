@@ -2,6 +2,10 @@ import { useState, useEffect, useCallback } from 'react';
 import { ImageUpload } from './components/ImageUpload';
 import { PromptGallery } from './components/PromptGallery';
 import { StatusIndicator, type GenerationStatus } from './components/StatusIndicator';
+import { PaywallModal } from './components/PaywallModal';
+import { WalletSelectionModal } from './components/WalletSelectionModal';
+import Header from './components/Header';
+import { useWallet, WalletProvider } from './context/WalletContext';
 import { extractImageUrl } from './utils/extractImageUrl';
 import './App.css';
 
@@ -19,13 +23,44 @@ interface GeneratedResult {
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8787';
 
-function App() {
+const AppContent = () => {
   const [referenceImage, setReferenceImage] = useState<string>('');
   const [prompts, setPrompts] = useState<Prompt[]>([]);
   const [selectedPrompt, setSelectedPrompt] = useState<Prompt | null>(null);
   const [generationStatus, setGenerationStatus] = useState<GenerationStatus>('idle');
   const [result, setResult] = useState<GeneratedResult | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  // x402 payment hook from context
+  const {
+    isPaying,
+    isPaid,
+    isConnecting,
+    isConnected,
+    isVerifying,
+    error: paymentError,
+    paymentRequired,
+    walletAddress,
+    txHash,
+    connectWallet,
+    signAndSendTransaction,
+    verifyPayment,
+    parsePaymentRequired,
+    resetPayment,
+    disconnectWallet,
+  } = useWallet();
+
+  // Track selected prompt for payment
+  const [selectedPromptForPayment, setSelectedPromptForPayment] = useState<Prompt | null>(null);
+
+  // Track wallet selection modal
+  const [showWalletSelection, setShowWalletSelection] = useState(false);
+  const [hasInjectedWallet, setHasInjectedWallet] = useState(false);
+
+  // Detect injected wallet on mount
+  useEffect(() => {
+    setHasInjectedWallet(!!(typeof window !== 'undefined' && (window as any).ethereum));
+  }, []);
 
   // Fetch prompts on mount
   useEffect(() => {
@@ -39,31 +74,40 @@ function App() {
       setPrompts(data.prompts || []);
     } catch (err) {
       setError('Failed to load prompts');
-      console.error(err);
     }
   };
 
   const handleGenerate = useCallback(async (prompt: Prompt) => {
     setGenerationStatus('generating');
     setError(null);
+    setSelectedPromptForPayment(prompt);
 
     try {
+      // First attempt without payment - only send promptId to get payment info
       const response = await fetch(`${API_BASE}/generate`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           promptId: prompt.id,
-          referenceImage,
         }),
       });
 
+      // Check if payment is required (402 status)
+      if (response.status === 402) {
+        const paymentReq = await parsePaymentRequired(response);
+        if (paymentReq) {
+          setGenerationStatus('payment_required');
+          return; // Show paywall modal
+        } else {
+          throw new Error('Payment required but could not parse payment details');
+        }
+      }
+
+      // Process successful response
       const data = await response.json();
       if (!data.success) {
         throw new Error(data.error || 'Generation failed');
       }
-
-      // Log full API response for debugging
-      console.log('OpenRouter API response:', data.apiResponse);
 
       // Extract image URL from API response
       const imageUrl = extractImageUrl(data.apiResponse);
@@ -80,9 +124,99 @@ function App() {
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Generation failed');
       setGenerationStatus('error');
-      console.error(err);
     }
-  }, [referenceImage]);
+  }, [referenceImage, parsePaymentRequired]);
+
+  const handleGenerateWithPayment = useCallback(async () => {
+    if (!paymentRequired || !selectedPromptForPayment) return;
+
+    try {
+      // Get payment details from the scheme
+      const scheme = paymentRequired.schemes[0];
+      if (!scheme || !scheme.payTo || !scheme.amount) {
+        throw new Error('Invalid payment details');
+      }
+
+      // Sign and send USDC transfer transaction
+      const hash = await signAndSendTransaction({
+        payTo: scheme.payTo,
+        amount: scheme.amount,
+      });
+
+      // Verify payment with worker and generate image
+      const response = await verifyPayment(
+        hash,
+        selectedPromptForPayment.id,
+        referenceImage
+      );
+
+      const data = await response.json();
+      if (!data.success) {
+        throw new Error(data.error || 'Generation failed');
+      }
+
+      // Extract image URL from API response
+      const imageUrl = extractImageUrl(data.apiResponse);
+      if (!imageUrl) {
+        throw new Error('No image found in API response');
+      }
+
+      setResult({
+        imageUrl,
+        promptId: selectedPromptForPayment.id,
+      });
+
+      setGenerationStatus('completed');
+      resetPayment();
+      setSelectedPromptForPayment(null);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Payment/Generation failed');
+      setGenerationStatus('error');
+    }
+  }, [paymentRequired, selectedPromptForPayment, referenceImage, signAndSendTransaction, verifyPayment, resetPayment, extractImageUrl]);
+
+  const handleClosePaywall = useCallback(() => {
+    resetPayment();
+    setSelectedPromptForPayment(null);
+    setSelectedPrompt(null);
+    setGenerationStatus('idle');
+  }, [resetPayment]);
+
+  const handleConnectWallet = async () => {
+    // Show wallet selection modal
+    setShowWalletSelection(true);
+  };
+
+  const handleStatusBarClick = () => {
+    if (!isConnected) {
+      setShowWalletSelection(true);
+    }
+  };
+
+  const handleSelectWallet = async (type: 'injected' | 'walletconnect') => {
+    try {
+      // For injected wallets, we can close the selection modal immediately
+      if (type === 'injected') {
+        setShowWalletSelection(false);
+      }
+      
+      // For WalletConnect, we keep the selection modal open (or in loading state)
+      // until the WalletConnect QR modal is triggered.
+      await connectWallet(type);
+      
+      // Close modal on success for injected wallets
+      if (type === 'injected') {
+        setShowWalletSelection(false);
+      }
+    } catch (err) {
+      // Error is handled in the hook - keep modal open for retry
+      console.error('Wallet connection failed:', err);
+    }
+  };
+
+  const handleCloseWalletSelection = useCallback(() => {
+    setShowWalletSelection(false);
+  }, []);
 
   const downloadImage = async (url: string) => {
     try {
@@ -97,7 +231,7 @@ function App() {
       document.body.removeChild(link);
       URL.revokeObjectURL(blobUrl);
     } catch (err) {
-      console.error('Download failed:', err);
+      // Silently ignore download errors
     }
   };
 
@@ -110,14 +244,14 @@ function App() {
     setResult(null);
     setGenerationStatus('idle');
     setError(null);
+    resetPayment();
+    setSelectedPromptForPayment(null);
+    setSelectedPrompt(null);
   };
 
   return (
     <div className="app">
-      <header className="app-header">
-        <h1>Prompter</h1>
-        <p className="tagline">Transform your images with AI</p>
-      </header>
+      <Header onMenuClick={() => console.log('Menu clicked')} onConnectClick={handleStatusBarClick} />
 
       <main className="app-main">
         <div className="upload-section">
@@ -155,8 +289,42 @@ function App() {
             </div>
           </div>
         )}
+
+        {/* Paywall Modal */}
+        <PaywallModal
+          isOpen={generationStatus === 'payment_required'}
+          paymentRequired={paymentRequired}
+          isConnecting={isConnecting}
+          isPaying={isPaying}
+          isConnected={isConnected}
+          isPaid={isPaid}
+          isVerifying={isVerifying}
+          walletAddress={walletAddress}
+          txHash={txHash}
+          error={paymentError}
+          onConnectWallet={handleConnectWallet}
+          onPayAndGenerate={handleGenerateWithPayment}
+          onClose={handleClosePaywall}
+        />
+
+        {/* Wallet Selection Modal */}
+        <WalletSelectionModal
+          isOpen={showWalletSelection}
+          isConnecting={isConnecting}
+          hasInjectedWallet={hasInjectedWallet}
+          onSelectWallet={handleSelectWallet}
+          onClose={handleCloseWalletSelection}
+        />
       </main>
     </div>
+  );
+}
+
+function App() {
+  return (
+    <WalletProvider>
+      <AppContent />
+    </WalletProvider>
   );
 }
 

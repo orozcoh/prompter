@@ -4,7 +4,8 @@ export type GenerationStatus =
   | 'idle'
   | 'generating'
   | 'completed'
-  | 'error';
+  | 'error'
+  | 'payment_required';
 
 interface StatusIndicatorProps {
   status: GenerationStatus;
@@ -16,6 +17,7 @@ const statusConfig: Record<GenerationStatus, { label: string; icon: string; colo
   'generating': { label: 'Generating image...', icon: '🎨', color: '#3b82f6' },
   'completed': { label: 'Image generated!', icon: '✓', color: '#10b981' },
   'error': { label: 'Error', icon: '✕', color: '#ef4444' },
+  'payment_required': { label: 'Payment Required', icon: '💳', color: '#f59e0b' },
 };
 
 export function StatusIndicator({ status, error }: StatusIndicatorProps) {

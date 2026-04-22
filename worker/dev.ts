@@ -7,7 +7,7 @@ import { serve } from 'bun';
 import app from './index';
 
 // In-memory KV mock
-class MemoryKV implements KVNamespace {
+class MemoryKV {
   private store = new Map<string, string>();
 
   async get(key: string, type?: 'json'): Promise<any> {
@@ -43,7 +43,7 @@ class MemoryKV implements KVNamespace {
 }
 
 // In-memory R2 mock
-class MemoryR2 implements R2Bucket {
+class MemoryR2 {
   private store = new Map<string, R2Object & { data: ArrayBuffer }>();
 
   async get(key: string): Promise<R2ObjectBody | null> {
@@ -101,29 +101,40 @@ class MemoryR2 implements R2Bucket {
   resumeMultipartUpload() { throw new Error('Not implemented'); }
 }
 
-// Seed some sample prompts
+// Seed prompts from prompts.json or fallback to samples
 const seedPrompts = async (kv: MemoryKV) => {
-  await kv.put('prompt-1', JSON.stringify({
-    name: 'Cyberpunk Portrait',
-    prompt: 'Transform into a cyberpunk character with neon lights and futuristic implants',
-    category: 'front-face',
-    imageUrl: 'https://picsum.photos/seed/cyberpunk/400/400',
-  }));
-
-  await kv.put('prompt-2', JSON.stringify({
-    name: 'Fantasy Warrior',
-    prompt: 'Transform into a medieval fantasy warrior in full armor',
-    category: 'full-body',
-    imageUrl: 'https://picsum.photos/seed/warrior/400/400',
-  }));
-
-  await kv.put('prompt-3', JSON.stringify({
-    name: 'Anime Style',
-    prompt: 'Transform into an anime character with big expressive eyes',
-    category: 'front-face',
-    imageUrl: 'https://picsum.photos/seed/anime/400/400',
-  }));
-
+  try {
+    const file = Bun.file('prompts.json');
+    if (!(await file.exists())) {
+      throw new Error('File does not exist');
+    }
+    const promptsData = await file.json();
+    
+    for (const prompt of promptsData) {
+      const key = `prompt-${prompt['prompt-id']}`;
+      await kv.put(key, JSON.stringify({
+        name: prompt.name,
+        prompt: prompt.prompt,
+        category: prompt.category,
+        imageUrl: prompt.imageUrl,
+      }));
+    }
+    console.log(`✅ Seeded ${promptsData.length} prompts from prompts.json`);
+  } catch (error) {
+    console.log('📝 prompts.json not found or invalid, using sample prompts');
+    await kv.put('prompt-1', JSON.stringify({
+      name: 'Cyberpunk Portrait',
+      prompt: 'Transform into a cyberpunk character with neon lights and futuristic implants',
+      category: 'front-face',
+      imageUrl: 'https://picsum.photos/seed/cyberpunk/400/400',
+    }));
+    await kv.put('prompt-2', JSON.stringify({
+      name: 'Fantasy Warrior',
+      prompt: 'Transform into a medieval fantasy warrior in full armor',
+      category: 'full-body',
+      imageUrl: 'https://picsum.photos/seed/warrior/400/400',
+    }));
+  }
 };
 
 // Create mock environment
@@ -131,7 +142,12 @@ const env = {
   PROMPTS_KV: new MemoryKV(),
   IMAGES_R2: new MemoryR2(),
   OPENROUTER_API_KEY: process.env.OPENROUTER_API_KEY || 'test-key',
-  GENERATION_MODEL: process.env.GENERATION_MODEL || 'google/gemini-2.5-flash-image-preview',
+  GENERATION_MODEL: process.env.GENERATION_MODEL || 'sourceful/riverflow-v2-fast-preview',
+  X402_PRICE_USD: process.env.X402_PRICE_USD || '0.001',
+  X402_PAY_TO_ADDRESS: process.env.X402_PAY_TO_ADDRESS || '0x7B3193eEb2d754d126b70A1F184659D52740D306',
+  LOCAL_DEV_BYPASS_PAYMENT: process.env.LOCAL_DEV_BYPASS_PAYMENT || 'true',
+  BASE_RPC_URL: process.env.BASE_RPC_URL || 'https://mainnet.base.org',
+  MIN_CONFIRMATIONS: process.env.MIN_CONFIRMATIONS || '3',
 };
 
 // Seed sample data
@@ -140,7 +156,7 @@ await seedPrompts(env.PROMPTS_KV as MemoryKV);
 // Start server
 const server = serve({
   port: 8787,
-  fetch: (req) => app.fetch(req, env),
+  fetch: (req) => app.fetch(req, env as any),
 });
 
 console.log(`🚀 Local dev server running at http://localhost:${server.port}`);
@@ -149,4 +165,13 @@ console.log(`   - GET  http://localhost:${server.port}/health`);
 console.log(`   - GET  http://localhost:${server.port}/prompts`);
 console.log(`   - POST http://localhost:${server.port}/generate`);
 console.log(`\n💡 Config from .env:`);
-console.log(`   - GENERATION_MODEL: ${process.env.GENERATION_MODEL || 'google/gemini-2.5-flash-image-preview'}`);
+console.log(`   - GENERATION_MODEL: ${process.env.GENERATION_MODEL || 'sourceful/riverflow-v2-fast-preview'}`);
+console.log(`   - X402_PAY_TO_ADDRESS: ${env.X402_PAY_TO_ADDRESS}`);
+console.log(`   - X402_PRICE_USD: ${env.X402_PRICE_USD}`);
+console.log(`   - BASE_RPC_URL: ${env.BASE_RPC_URL}`);
+console.log(`   - MIN_CONFIRMATIONS: ${env.MIN_CONFIRMATIONS}`);
+console.log(`   - LOCAL_DEV_BYPASS_PAYMENT: ${env.LOCAL_DEV_BYPASS_PAYMENT}${env.LOCAL_DEV_BYPASS_PAYMENT === 'true' ? ' (payment validation bypassed)' : ' (payment validation ENABLED)'}`);
+console.log(`\n🔐 To enable real payments:`);
+console.log(`   1. Set LOCAL_DEV_BYPASS_PAYMENT=false`);
+console.log(`   2. Users pay USDC directly to X402_PAY_TO_ADDRESS`);
+console.log(`   3. Worker verifies payments on-chain via Base RPC`);
