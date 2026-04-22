@@ -38,7 +38,11 @@ app.use('*', cors({
 
 // Helper to generate x402 payment required data
 function createPaymentRequiredData(priceUsd: string, payTo: string, resourceUrl: string) {
-  const amountRaw = BigInt(Math.floor(parseFloat(priceUsd) * 1e6)); // USDC has 6 decimals
+  const parsedPrice = parseFloat(priceUsd);
+  if (isNaN(parsedPrice)) {
+    throw new Error(`Invalid X402_PRICE_USD value: ${priceUsd}`);
+  }
+  const amountRaw = BigInt(Math.floor(parsedPrice * 1e6)); // USDC has 6 decimals
 
   return {
     x402Version: 2,
