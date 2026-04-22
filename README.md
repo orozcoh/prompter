@@ -26,7 +26,7 @@ Prompter is a free AI image generation platform that lets you transform referenc
 |-------|------------|
 | **Frontend** | Vite + React 19 + TypeScript |
 | **Backend** | Cloudflare Workers + Hono |
-| **Storage** | Cloudflare KV (prompts) + R2 (images) |
+| **Storage** | Cloudflare KV (prompts) + R2 (images - planned) |
 | **AI** | OpenRouter API |
 | **Payments** | x402 protocol + USDC on Base |
 | **Runtime** | Bun |
@@ -146,8 +146,28 @@ By default, payment validation is bypassed (`LOCAL_DEV_BYPASS_PAYMENT=true`). To
 
 ## 📦 Seed Data
 
-### Add Prompts to KV
+### KV Data Structure
+Prompts are stored with keys following this pattern: `prompt-{prompt-id}`
+Example: `prompt-any-001`, `prompt-any-002`, etc.
 
+Each value is a JSON object:
+```json
+{
+  "name": "Prompt Name",
+  "prompt": "AI prompt text",
+  "category": "category",
+  "imageUrl": "/path/to/image.png"
+}
+```
+
+### Bulk Population
+To populate the production KV from `prompts.json`, use the provided population script:
+```bash
+bun run scripts/populate-kv.ts
+```
+*Note: The script uses `wrangler kv key put --remote` to ensure data is uploaded to the production environment.*
+
+### Manual Entry (Single Prompt)
 ```bash
 wrangler kv key put PROMPTS_KV "prompt-1" --value '{
   "name": "Cyberpunk Portrait",
