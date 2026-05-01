@@ -25,6 +25,7 @@ const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8787';
 
 const AppContent = () => {
   const [referenceImage, setReferenceImage] = useState<string>('');
+  const [originalFileName, setOriginalFileName] = useState<string>('');
   const [prompts, setPrompts] = useState<Prompt[]>([]);
   const [selectedPrompt, setSelectedPrompt] = useState<Prompt | null>(null);
   const [generationStatus, setGenerationStatus] = useState<GenerationStatus>('idle');
@@ -224,7 +225,18 @@ const AppContent = () => {
       const blobUrl = URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = blobUrl;
-      link.download = `generated-${Date.now()}.png`;
+
+      // Build filename: ORIGINAL_FILE_NAME_PROMPT-NAME.png
+      let downloadName = `generated-${Date.now()}.png`; // fallback
+      if (originalFileName && selectedPrompt) {
+        const baseName = originalFileName.replace(/\.[^.]+$/, ''); // strip extension
+        const sanitizedPromptName = selectedPrompt.name
+          .replace(/\s+/g, '-')
+          .replace(/[^a-zA-Z0-9_-]/g, '');
+        downloadName = `${baseName}_${sanitizedPromptName}.png`;
+      }
+      link.download = downloadName;
+
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
@@ -254,7 +266,10 @@ const AppContent = () => {
 
       <main className="app-main">
         <div className="upload-section">
-          <ImageUpload onImageSelect={setReferenceImage} />
+          <ImageUpload onImageSelect={(data, name) => {
+            setReferenceImage(data);
+            if (name) setOriginalFileName(name);
+          }} />
         </div>
 
         <div className="gallery-section">

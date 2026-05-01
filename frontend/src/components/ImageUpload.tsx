@@ -1,7 +1,7 @@
 import { useState, useCallback } from 'react';
 
 interface ImageUploadProps {
-  onImageSelect: (imageData: string) => void;
+  onImageSelect: (imageData: string, fileName?: string) => void;
   acceptedTypes?: string[];
 }
 
@@ -22,7 +22,7 @@ export function ImageUpload({ onImageSelect, acceptedTypes = ['image/png', 'imag
     reader.onload = (e) => {
       const result = e.target?.result as string;
       setPreview(result);
-      onImageSelect(result);
+      onImageSelect(result, file.name);
     };
     reader.readAsDataURL(file);
   }, [acceptedTypes, onImageSelect]);
@@ -100,7 +100,7 @@ export function ImageUpload({ onImageSelect, acceptedTypes = ['image/png', 'imag
       {preview && (
         <button className="button secondary" onClick={() => {
           setPreview(null);
-          onImageSelect('');
+          onImageSelect('', '');
         }}>
           Remove Image
         </button>
