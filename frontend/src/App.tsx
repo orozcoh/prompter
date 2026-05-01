@@ -266,10 +266,13 @@ const AppContent = () => {
 
       <main className="app-main">
         <div className="upload-section">
-          <ImageUpload onImageSelect={(data, name) => {
-            setReferenceImage(data);
-            if (name) setOriginalFileName(name);
-          }} />
+          <ImageUpload
+            defaultPreviewUrl="/prompt-sample/prompter-ref-low.jpg"
+            onImageSelect={(data, name) => {
+              setReferenceImage(data);
+              if (name) setOriginalFileName(name);
+            }}
+          />
         </div>
 
         <div className="gallery-section">
