@@ -7,6 +7,7 @@ import { WalletSelectionModal } from './components/WalletSelectionModal';
 import Header from './components/Header';
 import { useWallet, WalletProvider } from './context/WalletContext';
 import { extractImageUrl } from './utils/extractImageUrl';
+import { useRegisterSW } from 'virtual:pwa-register/react';
 import './App.css';
 
 interface Prompt {
@@ -31,6 +32,22 @@ const AppContent = () => {
   const [generationStatus, setGenerationStatus] = useState<GenerationStatus>('idle');
   const [result, setResult] = useState<GeneratedResult | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  // PWA service worker update
+  const {
+    needRefresh: [needRefresh, setNeedRefresh],
+    updateServiceWorker,
+  } = useRegisterSW({
+    onRegisteredSW(swUrl, r) {
+      if (r) {
+        setInterval(async () => {
+          if (r.installing || !navigator.onLine) return;
+          const resp = await fetch(swUrl, { cache: 'no-store' });
+          if (resp?.status === 200) await r.update();
+        }, 60 * 60 * 1000);
+      }
+    },
+  });
 
   // x402 payment hook from context
   const {
@@ -333,6 +350,24 @@ const AppContent = () => {
           onClose={handleCloseWalletSelection}
         />
       </main>
+
+      {needRefresh && (
+        <div className="pwa-update-banner">
+          <span>New version available</span>
+          <button
+            className="button primary"
+            onClick={() => updateServiceWorker(true)}
+          >
+            Refresh
+          </button>
+          <button
+            className="button secondary"
+            onClick={() => setNeedRefresh(false)}
+          >
+            Dismiss
+          </button>
+        </div>
+      )}
     </div>
   );
 }

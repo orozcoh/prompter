@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-Free AI image generation platform. Users upload a reference image, select a prompt style from a catalog, and receive an AI-generated image. Features x402 protocol for pay-per-use API calls with on-chain USDC payments on Base.
+AI image generation platform. Users upload a reference image, select a prompt style from a catalog, and receive an AI-generated image. Features x402 protocol for pay-per-use API calls with on-chain USDC payments on Base.
 
 ## Tech Stack
 
