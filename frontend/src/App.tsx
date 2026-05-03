@@ -7,6 +7,7 @@ import { useWallet, WalletProvider } from './context/WalletContext';
 import { ImagesProvider } from './context/ImagesContext';
 import HomePage from './pages/HomePage';
 import MyImagesPage from './pages/MyImagesPage';
+import ConfigPage from './pages/ConfigPage';
 import AboutPage from './pages/AboutPage';
 import { useRegisterSW } from 'virtual:pwa-register/react';
 import './App.css';
@@ -46,6 +47,7 @@ const AppShell = () => {
           element={<HomePage onConnectWallet={() => setShowWalletSelection(true)} />}
         />
         <Route path="/myImages" element={<MyImagesPage />} />
+        <Route path="/config" element={<ConfigPage />} />
         <Route path="/about" element={<AboutPage />} />
       </Routes>
       <WalletSelectionModal

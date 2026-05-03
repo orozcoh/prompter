@@ -440,6 +440,17 @@ body {
       background: var(--surface-2);
     }
   }
+
+  &.danger {
+    background: red;
+    color: var(--text);
+    border: 1px solid var(--border);
+
+    &:hover,
+    &:focus-visible {
+      background: var(--surface-2);
+    }
+  }
 }
 
 .page-placeholder {

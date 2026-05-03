@@ -94,3 +94,9 @@ export async function clearAllImages(): Promise<void> {
     tx.onerror = () => reject(tx.error);
   });
 }
+
+export async function getStorageSize(): Promise<{ bytes: number; count: number }> {
+  const images = await getAllImages();
+  const bytes = images.reduce((sum, img) => sum + img.imageUrl.length, 0);
+  return { bytes, count: images.length };
+}
