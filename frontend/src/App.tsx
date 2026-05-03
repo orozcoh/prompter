@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import Header from './components/Header';
+import Footer from './components/Footer';
 import SidePanel from './components/SidePanel';
 import { WalletSelectionModal } from './components/WalletSelectionModal';
 import { useWallet, WalletProvider } from './context/WalletContext';
@@ -41,15 +42,18 @@ const AppShell = () => {
         onConnectClick={() => !isConnected && setShowWalletSelection(true)}
       />
       <SidePanel isOpen={isSidePanelOpen} onClose={() => setIsSidePanelOpen(false)} />
-      <Routes>
-        <Route
-          path="/"
-          element={<HomePage onConnectWallet={() => setShowWalletSelection(true)} />}
-        />
-        <Route path="/myImages" element={<MyImagesPage />} />
-        <Route path="/config" element={<ConfigPage />} />
-        <Route path="/about" element={<AboutPage />} />
-      </Routes>
+      <div style={{ flex: 1 }}>
+        <Routes>
+          <Route
+            path="/"
+            element={<HomePage onConnectWallet={() => setShowWalletSelection(true)} />}
+          />
+          <Route path="/myImages" element={<MyImagesPage />} />
+          <Route path="/config" element={<ConfigPage />} />
+          <Route path="/about" element={<AboutPage />} />
+        </Routes>
+      </div>
+      <Footer />
       <WalletSelectionModal
         isOpen={showWalletSelection}
         isConnecting={isConnecting}

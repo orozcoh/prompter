@@ -1,0 +1,44 @@
+.app-footer {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-4) var(--space-4);
+  margin-top: auto;
+  position: relative;
+}
+
+/* Neon top border mirroring Header */
+.app-footer::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    var(--color-neon-magenta) 20%,
+    var(--color-neon-cyan) 50%,
+    var(--color-neon-magenta) 80%,
+    transparent 100%
+  );
+  opacity: 0.4;
+}
+
+.footer-text {
+  font-family: var(--font-body);
+  font-size: var(--text-xs);
+  color: var(--color-text-muted);
+}
+
+.footer-link {
+  color: var(--color-neon-cyan);
+  text-decoration: none;
+  transition: color 0.2s, text-shadow 0.2s;
+}
+
+.footer-link:hover {
+  color: var(--color-accent-hover);
+  text-shadow: var(--glow-cyan-sm);
+}
