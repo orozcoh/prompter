@@ -1,59 +1,97 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&family=Space+Grotesk:wght@500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&family=Share+Tech+Mono&display=swap');
 
 body {
+  background: var(--color-bg);
+  color: var(--color-text);
   font-family: var(--font-body);
   font-size: var(--text-base);
+  line-height: 1.6;
+  overflow-x: hidden;
+}
+
+/* CRT scanline overlay */
+body::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 2px,
+    rgba(0, 0, 0, 0.08) 2px,
+    rgba(0, 0, 0, 0.08) 4px
+  );
+  pointer-events: none;
+  z-index: var(--z-scanlines);
+}
+
+/* CRT vignette */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background: radial-gradient(ellipse at center, transparent 55%, rgba(0, 0, 0, 0.5) 100%);
+  pointer-events: none;
+  z-index: var(--z-scanlines);
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-display);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
   color: var(--color-text);
-  background: var(--color-bg);
 }
 
-h1,
-h2,
-h3,
-h4 {
-  font-family: var(--font-heading);
-  color: var(--color-text);
-  line-height: 1.2;
-}
+h1 { font-size: var(--text-3xl); font-weight: 900; }
+h2 { font-size: var(--text-2xl); font-weight: 700; }
+h3 { font-size: var(--text-xl); font-weight: 700; }
+h4 { font-size: var(--text-lg); font-weight: 500; }
 
-h1 {
-  font-size: var(--text-2xl);
-  font-weight: 700;
-  letter-spacing: -0.02em;
-}
-
-h2 {
-  font-size: var(--text-xl);
-  font-weight: 600;
-  letter-spacing: -0.01em;
-}
-
-h3 {
-  font-size: var(--text-md);
-  font-weight: 600;
-}
-
-h4 {
-  font-size: var(--text-base);
-  font-weight: 600;
-}
-
-code,
-.mono {
-  font-family: var(--font-mono);
-  font-size: 0.9em;
-}
-
-a {
-  color: var(--color-accent);
-  text-decoration: none;
-}
-
-a:hover {
-  text-decoration: underline;
+::selection {
+  background: var(--color-neon-cyan);
+  color: var(--color-bg);
 }
 
 :focus-visible {
   outline: 2px solid var(--color-ring);
   outline-offset: 2px;
+  box-shadow: var(--glow-cyan-sm);
+}
+
+a {
+  color: var(--color-neon-cyan);
+  text-decoration: none;
+  transition: text-shadow 0.2s;
+}
+
+a:hover {
+  text-decoration: underline;
+  text-shadow: var(--glow-cyan-sm);
+}
+
+/* Scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--color-bg);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--color-surface-3);
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-neon-cyan);
+}
+
+/* Kill scanlines and vignette for reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  body::after,
+  body::before {
+    display: none;
+  }
 }

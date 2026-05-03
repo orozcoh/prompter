@@ -127,9 +127,7 @@ export function PaywallModal({
                 {isConnecting ? (
                   <div className="step-spinner"/>
                 ) : isConnected ? (
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
-                    <polyline points="20 6 9 17 4 12"/>
-                  </svg>
+                  <Check size={20} />
                 ) : (
                   <span>1</span>
                 )}
@@ -162,9 +160,7 @@ export function PaywallModal({
                 ) : isVerifying ? (
                   <div className="step-spinner"/>
                 ) : isPaid ? (
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
-                    <polyline points="20 6 9 17 4 12"/>
-                  </svg>
+                  <Check size={20} />
                 ) : (
                   <span>2</span>
                 )}
