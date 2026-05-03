@@ -1,0 +1,54 @@
+.side-panel-backdrop {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 998;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.3s ease, visibility 0.3s ease;
+}
+
+.side-panel-backdrop.open {
+  opacity: 1;
+  visibility: visible;
+}
+
+.side-panel {
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 170px;
+  background: var(--surface, #1a1a1f);
+  border-left: 1px solid var(--border, #333);
+  z-index: 999;
+  display: flex;
+  flex-direction: column;
+  padding: 80px 16px 16px 16px;
+  transform: translateX(100%);
+  transition: transform 0.3s ease;
+}
+
+.side-panel.open {
+  transform: translateX(0);
+}
+
+.side-panel a {
+  color: var(--text, #e0e0e0);
+  text-decoration: none;
+  padding: 12px 0;
+  font-size: 0.95rem;
+  transition: color 0.2s;
+  cursor: pointer;
+}
+
+.side-panel a:hover {
+  color: var(--accent, #7c8bff);
+}
+
+.side-panel a:last-child {
+  margin-top: auto;
+}
