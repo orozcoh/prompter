@@ -4,7 +4,9 @@ import { PromptGallery } from '../components/PromptGallery';
 import { StatusIndicator, type GenerationStatus } from '../components/StatusIndicator';
 import { PaywallModal } from '../components/PaywallModal';
 import { useWallet } from '../context/WalletContext';
+import { useImages } from '../context/ImagesContext';
 import { extractImageUrl } from '../utils/extractImageUrl';
+import { urlToBase64 } from '../utils/imageStorage';
 
 interface Prompt {
   id: string;
@@ -48,6 +50,8 @@ const HomePage = ({ onConnectWallet }: HomePageProps) => {
     parsePaymentRequired,
     resetPayment,
   } = useWallet();
+
+  const { addImage } = useImages();
 
   const [selectedPromptForPayment, setSelectedPromptForPayment] = useState<Prompt | null>(null);
 
@@ -99,6 +103,27 @@ const HomePage = ({ onConnectWallet }: HomePageProps) => {
         throw new Error('No image found in API response');
       }
 
+      urlToBase64(imageUrl).then(base64Url => {
+        let fileName = `generated-${Date.now()}.png`;
+        if (originalFileName) {
+          const baseName = originalFileName.replace(/\.[^.]+$/, '');
+          const sanitizedPromptName = prompt.name
+            .replace(/\s+/g, '-')
+            .replace(/[^a-zA-Z0-9_-]/g, '');
+          fileName = `${baseName}_${sanitizedPromptName}.png`;
+        }
+        addImage({
+          id: crypto.randomUUID(),
+          imageUrl: base64Url,
+          promptId: prompt.id,
+          promptName: prompt.name,
+          fileName,
+          timestamp: Date.now(),
+          cost: data.cost,
+          model: data.model,
+        });
+      }).catch(console.error);
+
       setResult({
         imageUrl,
         promptId: prompt.id,
@@ -109,7 +134,7 @@ const HomePage = ({ onConnectWallet }: HomePageProps) => {
       setError(err instanceof Error ? err.message : 'Generation failed');
       setGenerationStatus('error');
     }
-  }, [referenceImage, parsePaymentRequired]);
+  }, [referenceImage, parsePaymentRequired, addImage]);
 
   const handleGenerateWithPayment = useCallback(async () => {
     if (!paymentRequired || !selectedPromptForPayment) return;
@@ -141,6 +166,28 @@ const HomePage = ({ onConnectWallet }: HomePageProps) => {
         throw new Error('No image found in API response');
       }
 
+      urlToBase64(imageUrl).then(base64Url => {
+        let fileName = `generated-${Date.now()}.png`;
+        if (originalFileName) {
+          const baseName = originalFileName.replace(/\.[^.]+$/, '');
+          const sanitizedPromptName = selectedPromptForPayment.name
+            .replace(/\s+/g, '-')
+            .replace(/[^a-zA-Z0-9_-]/g, '');
+          fileName = `${baseName}_${sanitizedPromptName}.png`;
+        }
+        addImage({
+          id: crypto.randomUUID(),
+          imageUrl: base64Url,
+          promptId: selectedPromptForPayment.id,
+          promptName: selectedPromptForPayment.name,
+          fileName,
+          timestamp: Date.now(),
+          txHash: data.txHash || hash,
+          cost: data.cost,
+          model: data.model,
+        });
+      }).catch(console.error);
+
       setResult({
         imageUrl,
         promptId: selectedPromptForPayment.id,
@@ -153,7 +200,7 @@ const HomePage = ({ onConnectWallet }: HomePageProps) => {
       setError(err instanceof Error ? err.message : 'Payment/Generation failed');
       setGenerationStatus('error');
     }
-  }, [paymentRequired, selectedPromptForPayment, referenceImage, signAndSendTransaction, verifyPayment, resetPayment]);
+  }, [paymentRequired, selectedPromptForPayment, referenceImage, signAndSendTransaction, verifyPayment, resetPayment, addImage]);
 
   const handleClosePaywall = useCallback(() => {
     resetPayment();

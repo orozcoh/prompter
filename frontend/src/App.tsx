@@ -4,6 +4,7 @@ import Header from './components/Header';
 import SidePanel from './components/SidePanel';
 import { WalletSelectionModal } from './components/WalletSelectionModal';
 import { useWallet, WalletProvider } from './context/WalletContext';
+import { ImagesProvider } from './context/ImagesContext';
 import HomePage from './pages/HomePage';
 import MyImagesPage from './pages/MyImagesPage';
 import AboutPage from './pages/AboutPage';
@@ -76,26 +77,28 @@ function App() {
 
   return (
     <WalletProvider>
-      <BrowserRouter>
-        <AppShell />
-        {needRefresh && (
-          <div className="pwa-update-banner">
-            <span>New version available</span>
-            <button
-              className="button primary"
-              onClick={() => updateServiceWorker(true)}
-            >
-              Refresh
-            </button>
-            <button
-              className="button secondary"
-              onClick={() => setNeedRefresh(false)}
-            >
-              Dismiss
-            </button>
-          </div>
-        )}
-      </BrowserRouter>
+      <ImagesProvider>
+        <BrowserRouter>
+          <AppShell />
+          {needRefresh && (
+            <div className="pwa-update-banner">
+              <span>New version available</span>
+              <button
+                className="button primary"
+                onClick={() => updateServiceWorker(true)}
+              >
+                Refresh
+              </button>
+              <button
+                className="button secondary"
+                onClick={() => setNeedRefresh(false)}
+              >
+                Dismiss
+              </button>
+            </div>
+          )}
+        </BrowserRouter>
+      </ImagesProvider>
     </WalletProvider>
   );
 }
