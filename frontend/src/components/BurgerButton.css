@@ -28,3 +28,15 @@
   border-radius: 2px;
   transition: all 0.3s ease;
 }
+
+.burger-button.open .line:nth-child(1) {
+  transform: translateY(7.5px) rotate(45deg);
+}
+
+.burger-button.open .line:nth-child(2) {
+  opacity: 0;
+}
+
+.burger-button.open .line:nth-child(3) {
+  transform: translateY(-7.5px) rotate(-45deg);
+}

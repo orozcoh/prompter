@@ -6,11 +6,8 @@ interface ImageUploadProps {
   defaultPreviewUrl?: string;
 }
 
-type ImageCategory = 'front-face' | 'full-body' | 'others';
-
 export function ImageUpload({ onImageSelect, acceptedTypes = ['image/png', 'image/jpeg', 'image/webp'], defaultPreviewUrl }: ImageUploadProps) {
   const [preview, setPreview] = useState<string | null>(defaultPreviewUrl || null);
-  const [category, setCategory] = useState<ImageCategory>('front-face');
   const [isDragOver, setIsDragOver] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -51,36 +48,6 @@ export function ImageUpload({ onImageSelect, acceptedTypes = ['image/png', 'imag
   return (
     <div className="image-upload">
       <h3>Upload Reference Image</h3>
-
-      <div className="category-selector">
-        <label>
-          <input
-            type="radio"
-            value="front-face"
-            checked={category === 'front-face'}
-            onChange={(e) => setCategory(e.target.value as ImageCategory)}
-          />
-          Front Face
-        </label>
-        <label>
-          <input
-            type="radio"
-            value="full-body"
-            checked={category === 'full-body'}
-            onChange={(e) => setCategory(e.target.value as ImageCategory)}
-          />
-          Full Body
-        </label>
-        <label>
-          <input
-            type="radio"
-            value="others"
-            checked={category === 'others'}
-            onChange={(e) => setCategory(e.target.value as ImageCategory)}
-          />
-          Others
-        </label>
-      </div>
 
       <div
         className={`drop-zone ${isDragOver ? 'drag-over' : ''} ${preview ? 'has-preview' : ''}`}
