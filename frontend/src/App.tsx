@@ -297,6 +297,7 @@ const AppContent = () => {
             prompts={prompts}
             selectedPrompt={selectedPrompt}
             onSelectPrompt={handleSelectPrompt}
+            generationDisabled={!referenceImage}
           />
         </div>
 

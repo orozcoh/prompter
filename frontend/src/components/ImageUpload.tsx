@@ -117,9 +117,9 @@ export function ImageUpload({ onImageSelect, acceptedTypes = ['image/png', 'imag
 
       {preview && (
         <button className="button secondary" onClick={() => {
-          // Clear preview to reveal the upload UI (drag & drop + Choose File)
           setPreview(null);
           onImageSelect('', '');
+          if (fileInputRef.current) fileInputRef.current.value = '';
         }}>
           {isDefaultPreview ? 'Use your own image' : 'Remove Image'}
         </button>

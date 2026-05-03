@@ -10,9 +10,10 @@ interface PromptGalleryProps {
   prompts: Prompt[];
   selectedPrompt: Prompt | null;
   onSelectPrompt: (prompt: Prompt) => void;
+  generationDisabled?: boolean;
 }
 
-export function PromptGallery({ prompts, selectedPrompt, onSelectPrompt }: PromptGalleryProps) {
+export function PromptGallery({ prompts, selectedPrompt, onSelectPrompt, generationDisabled }: PromptGalleryProps) {
   return (
     <div className="prompt-gallery">
       <h3>Select a Prompt Style</h3>
@@ -38,7 +39,7 @@ export function PromptGallery({ prompts, selectedPrompt, onSelectPrompt }: Promp
               <button
                 className="button turn-into-btn"
                 onClick={() => onSelectPrompt(prompt)}
-                disabled={selectedPrompt?.id === prompt.id}
+                disabled={generationDisabled || selectedPrompt?.id === prompt.id}
               >
                 {selectedPrompt?.id === prompt.id ? 'Selected' : 'Generate'}
               </button>
