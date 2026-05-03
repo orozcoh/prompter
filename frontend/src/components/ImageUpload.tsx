@@ -50,17 +50,19 @@ export function ImageUpload({ onImageSelect, acceptedTypes = ['image/png', 'imag
       <h3>Upload Reference Image</h3>
 
       <div
-        className={`drop-zone ${isDragOver ? 'drag-over' : ''} ${preview ? 'has-preview' : ''}`}
+        className={`drop-zone ${isDragOver ? 'drag-over' : ''} ${preview ? 'has-preview' : ''} ${isDefaultPreview ? 'drop-zone-clickable' : ''}`}
         onDragOver={(e) => { e.preventDefault(); setIsDragOver(true); }}
         onDragLeave={() => setIsDragOver(false)}
         onDrop={handleDrop}
+        role="button"
+        aria-label={preview ? 'Click to change uploaded image' : 'Upload reference image. Drag and drop or click to choose a file.'}
+        tabIndex={0}
+        onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') fileInputRef.current?.click(); }}
         onClick={() => {
-          // When showing the default preview, clicking anywhere opens the file picker
           if (isDefaultPreview) {
             fileInputRef.current?.click();
           }
         }}
-        style={{ cursor: isDefaultPreview ? 'pointer' : undefined }}
       >
         {/* Hidden file input is always in the DOM so ref always works */}
         <input

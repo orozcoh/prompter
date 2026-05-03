@@ -1,34 +1,43 @@
 .config-page {
   max-width: 600px;
   margin: 0 auto;
-  padding: 40px 24px;
+  padding: var(--space-12) var(--space-6);
 }
 
 .config-page h2 {
-  margin-bottom: 32px;
+  margin-bottom: var(--space-8);
+  color: var(--color-neon-cyan);
+  text-shadow: var(--glow-cyan-sm);
 }
 
 .config-section {
-  background: var(--surface, rgba(255, 255, 255, 0.04));
-  border: 1px solid var(--border, rgba(255, 255, 255, 0.08));
-  border-radius: 12px;
-  padding: 24px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: var(--space-6);
+
+  display:flex;
+  flex-direction: column;
+  align-items: center;
 }
 
 .config-section h3 {
-  margin-bottom: 16px;
+  margin-bottom: var(--space-4);
+  font-size: var(--text-md);
 }
 
 .config-stat {
-  margin-bottom: 12px;
-  color: var(--text, #e0e0e0);
+  margin-bottom: var(--space-3);
+  color: var(--color-text-secondary);
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
 }
 
 .config-stat strong {
-  color: var(--text-bright, #ffffff);
+  color: var(--color-text);
 }
 
 .config-section .button {
-  margin-top: 16px;
-  color: red;
+  margin-top: var(--space-4);
+  color: var(--color-error);
 }

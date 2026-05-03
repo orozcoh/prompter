@@ -21,7 +21,7 @@ const Header: React.FC<HeaderProps> = ({ isMenuOpen, onMenuClick, onConnectClick
 </div>
     
     <div className="header-center">
-      <h1 className="header-title">Prompter</h1>
+      <h1 className="header-title glitch-hover" data-text="Prompter">Prompter</h1>
     </div>
     
     <div className="header-right">

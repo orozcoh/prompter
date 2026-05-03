@@ -1,0 +1,121 @@
+:root {
+  /* Void black palette */
+  --color-bg: #000000;
+  --color-bg-elevated: #040410;
+  --color-surface: #0a0a18;
+  --color-surface-2: #0f0f22;
+  --color-surface-3: #151530;
+
+  /* Text — CRT phosphor tones */
+  --color-text: #dde4ff;
+  --color-text-secondary: #8899cc;
+  --color-text-muted: #5566aa;
+  --color-text-inverse: #000000;
+
+  /* Neon triad */
+  --color-neon-cyan: #00ffff;
+  --color-neon-magenta: #ff00aa;
+  --color-neon-amber: #ffcc00;
+
+  /* Glow presets */
+  --glow-cyan-sm: 0 0 6px rgba(0, 255, 255, 0.4);
+  --glow-cyan-md: 0 0 12px rgba(0, 255, 255, 0.5);
+  --glow-cyan-lg: 0 0 24px rgba(0, 255, 255, 0.4), 0 0 48px rgba(0, 255, 255, 0.2);
+  --glow-magenta-sm: 0 0 6px rgba(255, 0, 170, 0.4);
+  --glow-magenta-md: 0 0 12px rgba(255, 0, 170, 0.5);
+  --glow-amber-sm: 0 0 6px rgba(255, 204, 0, 0.4);
+
+  /* Semantic */
+  --color-accent: var(--color-neon-cyan);
+  --color-accent-hover: #33ffff;
+  --color-accent-muted: rgba(0, 255, 255, 0.1);
+  --color-accent-pink: var(--color-neon-magenta);
+  --color-success: #00ff66;
+  --color-success-muted: rgba(0, 255, 102, 0.1);
+  --color-error: #ff1144;
+  --color-error-muted: rgba(255, 17, 68, 0.1);
+  --color-warning: var(--color-neon-amber);
+  --color-warning-muted: rgba(255, 204, 0, 0.1);
+
+  /* Borders */
+  --color-border: #1a1a35;
+  --color-border-emphasized: #2a2a55;
+  --color-border-neon: rgba(0, 255, 255, 0.25);
+
+  /* Overlay */
+  --color-overlay: rgba(0, 0, 0, 0.9);
+
+  /* Focus ring */
+  --color-ring: var(--color-neon-cyan);
+
+  /* Typography */
+  --font-display: 'Orbitron', sans-serif;
+  --font-body: 'Share Tech Mono', 'JetBrains Mono', monospace;
+  --font-mono: 'JetBrains Mono', monospace;
+
+  /* Type scale (compressed for monospace) */
+  --text-xs: 0.7rem;
+  --text-sm: 0.8rem;
+  --text-base: 0.9rem;
+  --text-md: 1rem;
+  --text-lg: 1.15rem;
+  --text-xl: 1.35rem;
+  --text-2xl: 1.75rem;
+  --text-3xl: 2.25rem;
+  --text-4xl: 3rem;
+
+  /* Spacing */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-12: 48px;
+  --space-16: 64px;
+
+  /* Radii — sharp cyberpunk */
+  --radius-sm: 2px;
+  --radius-md: 3px;
+  --radius-lg: 4px;
+  --radius-xl: 6px;
+
+  /* Shadows — hard, dark */
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.8);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.9);
+  --shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.95);
+
+  /* Z-Index */
+  --z-base: 0;
+  --z-sticky: 10;
+  --z-dropdown: 20;
+  --z-overlay: 40;
+  --z-side-panel: 50;
+  --z-modal-backdrop: 100;
+  --z-modal: 101;
+  --z-toast: 200;
+  --z-scanlines: 9998;
+
+  color-scheme: dark;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Backward-compatible aliases */
+:root {
+  --bg: var(--color-bg);
+  --surface: var(--color-surface);
+  --surface-2: var(--color-surface-2);
+  --text: var(--color-text);
+  --text-muted: var(--color-text-muted);
+  --accent: var(--color-neon-cyan);
+  --accent-hover: var(--color-accent-hover);
+  --accent-bg: var(--color-accent-muted);
+  --accent-border: var(--color-border-neon);
+  --border: var(--color-border);
+  --success: var(--color-success);
+  --error: var(--color-error);
+}
