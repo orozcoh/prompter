@@ -1,3 +1,4 @@
+import { X, ChevronRight } from 'lucide-react';
 import './PaywallModal.css';
 
 interface WalletSelectionModalProps {
@@ -20,11 +21,8 @@ export function WalletSelectionModal({
   return (
     <div className="paywall-overlay" onClick={onClose}>
       <div className="paywall-modal wallet-selection-modal" onClick={e => e.stopPropagation()}>
-        <button className="paywall-close" onClick={onClose}>
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-            <line x1="18" y1="6" x2="6" y2="18"/>
-            <line x1="6" y1="6" x2="18" y2="18"/>
-          </svg>
+        <button className="paywall-close" onClick={onClose} aria-label="Close">
+          <X size={24} />
         </button>
 
         <div className="paywall-content">
@@ -56,9 +54,7 @@ export function WalletSelectionModal({
                     <span className="wallet-description">Use your installed wallet extension</span>
                   </div>
                   <div className="wallet-arrow">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                      <polyline points="9 18 15 12 9 6"/>
-                    </svg>
+                    <ChevronRight size={20} />
                   </div>
                 </button>
               )}
@@ -83,15 +79,13 @@ export function WalletSelectionModal({
                   <span className="wallet-description">Scan QR code with your mobile wallet</span>
                 </div>
                 <div className="wallet-arrow">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <polyline points="9 18 15 12 9 6"/>
-                  </svg>
+                  <ChevronRight size={20} />
                 </div>
               </button>
 
               {/* No wallet message */}
               {!hasInjectedWallet && (
-                <div style={{ textAlign: 'center', padding: '16px', color: 'var(--text-muted)', fontSize: '0.85rem' }}>
+                <div className="no-wallet-hint">
                   No wallet extension detected. Use WalletConnect or install MetaMask.
                 </div>
               )}

@@ -6,7 +6,7 @@ const AboutPage = () => {
       <p>Prompter turns your photos into AI-generated art. You upload an image, pick a style (like "pixel art" or "watercolor painting"), and an AI redraws it in that style.</p>
 
       <h3>How it works</h3>
-      <ol style={{ textAlign: 'left', maxWidth: 600, margin: '0 auto 24px', lineHeight: 1.8, color: 'var(--text, #e0e0e0)' }}>
+      <ol className="about-steps">
         <li>Upload a reference image — a photo, sketch, or anything.</li>
         <li>Browse the prompt catalog and pick a visual style.</li>
         <li>Click the style. The image is sent to an AI model via OpenRouter.</li>

@@ -167,8 +167,8 @@
 }
 
 .payment-error {
-  background: rgba(244, 67, 54, 0.1);
-  border: 1px solid rgba(244, 67, 54, 0.3);
+  background: var(--color-error-muted);
+  border: 1px solid var(--color-error);
   border-radius: 8px;
   padding: 12px 16px;
   display: flex;
@@ -198,8 +198,8 @@
   transition: all 0.2s;
 
   &.completed {
-    background: rgba(76, 175, 80, 0.1);
-    border: 1px solid rgba(76, 175, 80, 0.3);
+    background: var(--color-success-muted);
+    border: 1px solid var(--color-success);
 
     .step-indicator {
       background: var(--success);
@@ -282,8 +282,8 @@
 }
 
 .payment-success {
-  background: rgba(76, 175, 80, 0.1);
-  border: 1px solid rgba(76, 175, 80, 0.3);
+  background: var(--color-success-muted);
+  border: 1px solid var(--color-success);
   border-radius: 12px;
   padding: 16px;
   display: flex;
@@ -299,8 +299,8 @@
 }
 
 .payment-verifying {
-  background: rgba(33, 150, 243, 0.1);
-  border: 1px solid rgba(33, 150, 243, 0.3);
+  background: var(--color-accent-muted);
+  border: 1px solid var(--color-accent);
   border-radius: 12px;
   padding: 16px;
   display: flex;
@@ -313,8 +313,8 @@
   .verifying-spinner {
     width: 20px;
     height: 20px;
-    border: 3px solid rgba(33, 150, 243, 0.3);
-    border-top-color: var(--accent);
+    border: 3px solid var(--color-accent-muted);
+    border-top-color: var(--color-accent);
     border-radius: 50%;
     animation: spin 0.8s linear infinite;
   }

@@ -1,16 +1,17 @@
+/* Backward-compatible aliases for component CSS files still using old variable names */
 :root {
-  --bg: #0f0f11;
-  --surface: #1a1a1f;
-  --surface-2: #25252b;
-  --text: #e0e0e0;
-  --text-muted: #999;
-  --accent: #7c8bff;
-  --accent-hover: #8b95ff;
-  --accent-bg: rgba(124, 138, 255, 0.1);
-  --accent-border: rgba(124, 138, 255, 0.3);
-  --border: #333;
-  --success: #4caf50;
-  --error: #f44336;
+  --bg: var(--color-bg);
+  --surface: var(--color-surface);
+  --surface-2: var(--color-surface-2);
+  --text: var(--color-text);
+  --text-muted: var(--color-text-muted);
+  --accent: var(--color-accent);
+  --accent-hover: var(--color-accent-hover);
+  --accent-bg: var(--color-accent-muted);
+  --accent-border: rgba(124, 59, 255, 0.3);
+  --border: var(--color-border);
+  --success: var(--color-success);
+  --error: var(--color-error);
 }
 
 /* Ensure WalletConnect modal appears above all overlays */
@@ -172,6 +173,10 @@ body {
     &.has-preview {
       border-style: solid;
       border-color: var(--surface-2);
+    }
+
+    &.drop-zone-clickable {
+      cursor: pointer;
     }
 
     .drop-placeholder {
@@ -477,6 +482,25 @@ body {
     margin: 0 auto;
     line-height: 1.6;
   }
+}
+
+.about-steps {
+  text-align: left;
+  max-width: 600px;
+  margin: 0 auto 24px;
+  line-height: 1.8;
+  color: var(--color-text);
+}
+
+.loading-text {
+  color: var(--color-text-muted);
+}
+
+.no-wallet-hint {
+  text-align: center;
+  padding: 16px;
+  color: var(--color-text-muted);
+  font-size: 0.85rem;
 }
 
 .pwa-update-banner {

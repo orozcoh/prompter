@@ -25,10 +25,10 @@
 }
 
 .config-stat strong {
-  color: var(--text-bright, #ffffff);
+  color: var(--color-text);
 }
 
 .config-section .button {
   margin-top: 16px;
-  color: red;
+  color: var(--color-error);
 }

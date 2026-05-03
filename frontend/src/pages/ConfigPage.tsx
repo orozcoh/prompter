@@ -36,7 +36,7 @@ const ConfigPage = () => {
   };
 
   return (
-    <main> {/* <main className="app-main">  */}
+    <main className="app-main">
       <div className="config-page">
         <div className="config-section">
           <h3>Database</h3>

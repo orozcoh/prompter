@@ -6,8 +6,28 @@
   padding: 16px 24px;
   border-radius: 12px;
   border: 2px solid;
-  background: rgba(255, 255, 255, 0.05);
+  background: var(--color-surface);
   animation: fadeIn 0.3s ease;
+}
+
+.status-indicator.status-generating {
+  border-color: var(--color-accent);
+  color: var(--color-accent);
+}
+
+.status-indicator.status-completed {
+  border-color: var(--color-success);
+  color: var(--color-success);
+}
+
+.status-indicator.status-error {
+  border-color: var(--color-error);
+  color: var(--color-error);
+}
+
+.status-indicator.status-payment_required {
+  border-color: var(--color-warning);
+  color: var(--color-warning);
 }
 
 @keyframes fadeIn {
@@ -33,7 +53,7 @@
 
 .status-error {
   font-size: 12px;
-  color: #ef4444;
+  color: var(--color-error);
   text-align: center;
   max-width: 300px;
 }
