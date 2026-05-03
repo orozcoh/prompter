@@ -18,6 +18,7 @@ const SidePanel: React.FC<SidePanelProps> = ({ isOpen, onClose }) => {
       <nav className={`side-panel${isOpen ? ' open' : ''}`} aria-label="Side menu">
         <Link to="/" onClick={onClose}>Generate Image</Link>
         <Link to="/myImages" onClick={onClose}>My AI Images</Link>
+        <Link to="/config" onClick={onClose} className="side-panel-bottom">Config</Link>
         <Link to="/about" onClick={onClose}>About</Link>
       </nav>
     </>

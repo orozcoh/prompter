@@ -1,0 +1,34 @@
+.config-page {
+  max-width: 600px;
+  margin: 0 auto;
+  padding: 40px 24px;
+}
+
+.config-page h2 {
+  margin-bottom: 32px;
+}
+
+.config-section {
+  background: var(--surface, rgba(255, 255, 255, 0.04));
+  border: 1px solid var(--border, rgba(255, 255, 255, 0.08));
+  border-radius: 12px;
+  padding: 24px;
+}
+
+.config-section h3 {
+  margin-bottom: 16px;
+}
+
+.config-stat {
+  margin-bottom: 12px;
+  color: var(--text, #e0e0e0);
+}
+
+.config-stat strong {
+  color: var(--text-bright, #ffffff);
+}
+
+.config-section .button {
+  margin-top: 16px;
+  color: red;
+}

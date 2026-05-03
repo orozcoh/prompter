@@ -4,7 +4,7 @@ import { ImageModal } from '../components/ImageModal';
 import type { StoredImage } from '../utils/imageStorage';
 
 const MyImagesPage = () => {
-  const { images, removeImage, clearAll, isLoading } = useImages();
+  const { images, removeImage, isLoading } = useImages();
   const [selectedImage, setSelectedImage] = useState<StoredImage | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
 
@@ -30,14 +30,9 @@ const MyImagesPage = () => {
   return (
     <main className="app-main">
       <div className="my-images-page">
-        <div className="my-images-header">
+       {/*  <div className="my-images-header">
           <h2>My AI Images</h2>
-          {images.length > 0 && (
-            <button className="button secondary" onClick={clearAll}>
-              Clear All
-            </button>
-          )}
-        </div>
+        </div> */}
 
         {images.length === 0 ? (
           <div className="my-images-empty">

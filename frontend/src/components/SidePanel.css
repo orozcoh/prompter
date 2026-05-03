@@ -49,6 +49,6 @@
   color: var(--accent, #7c8bff);
 }
 
-.side-panel a:last-child {
+.side-panel .side-panel-bottom {
   margin-top: auto;
 }
