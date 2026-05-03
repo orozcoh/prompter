@@ -125,6 +125,8 @@ async function generateImage(
   const response: any = {
     success: true,
     promptId,
+    cost: c.env.X402_PRICE_USD,
+    model: c.env.GENERATION_MODEL || 'sourceful/riverflow-v2-fast-preview',
     apiResponse: cleanedResult,
   };
 
