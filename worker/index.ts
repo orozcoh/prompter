@@ -6,6 +6,7 @@ import { verifyPayment, type PaymentVerificationParams } from './utils/verifyPay
 
 export type Env = {
   PROMPTS_KV: KVNamespace;
+  TXHASH_REGISTRY_KV: KVNamespace;
   OPENROUTER_API_KEY: string;
   GENERATION_MODEL?: string;
   X402_PRICE_USD: string;
@@ -265,8 +266,7 @@ app.post('/verify-payment', async (c) => {
     }
 
     // Check for replay attack - verify txHash hasn't been used before
-    const replayKey = `processed_tx:${txHash}`;
-    const alreadyProcessed = await c.env.PROMPTS_KV.get(replayKey);
+    const alreadyProcessed = await c.env.TXHASH_REGISTRY_KV.get(txHash);
     if (alreadyProcessed) {
       return c.json({
         error: 'Transaction already processed',
@@ -301,7 +301,7 @@ app.post('/verify-payment', async (c) => {
     console.log(`rx: VALID - ${verification.amount} USDC, ${verification.confirmations} confirmations`);
 
     // Mark tx as processed to prevent replay
-    await c.env.PROMPTS_KV.put(replayKey, JSON.stringify({
+    await c.env.TXHASH_REGISTRY_KV.put(txHash, JSON.stringify({
       promptId,
       timestamp: Date.now(),
       amount: verification.amount,

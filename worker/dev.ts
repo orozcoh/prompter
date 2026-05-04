@@ -140,6 +140,7 @@ const seedPrompts = async (kv: MemoryKV) => {
 // Create mock environment
 const env = {
   PROMPTS_KV: new MemoryKV(),
+  TXHASH_REGISTRY_KV: new MemoryKV(),
   IMAGES_R2: new MemoryR2(),
   OPENROUTER_API_KEY: process.env.OPENROUTER_API_KEY || 'test-key',
   GENERATION_MODEL: process.env.GENERATION_MODEL || 'sourceful/riverflow-v2-fast-preview',
