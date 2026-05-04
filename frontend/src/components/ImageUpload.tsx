@@ -1,16 +1,18 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef } from 'react';
 
 interface ImageUploadProps {
-  onImageSelect: (imageData: string) => void;
+  onImageSelect: (imageData: string, fileName?: string) => void;
   acceptedTypes?: string[];
+  defaultPreviewUrl?: string;
 }
 
-type ImageCategory = 'front-face' | 'full-body' | 'others';
-
-export function ImageUpload({ onImageSelect, acceptedTypes = ['image/png', 'image/jpeg', 'image/webp'] }: ImageUploadProps) {
-  const [preview, setPreview] = useState<string | null>(null);
-  const [category, setCategory] = useState<ImageCategory>('front-face');
+export function ImageUpload({ onImageSelect, acceptedTypes = ['image/png', 'image/jpeg', 'image/webp'], defaultPreviewUrl }: ImageUploadProps) {
+  const [preview, setPreview] = useState<string | null>(defaultPreviewUrl || null);
   const [isDragOver, setIsDragOver] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Track whether the current preview is the default sample image or a user upload
+  const isDefaultPreview = !!(defaultPreviewUrl && preview === defaultPreviewUrl);
 
   const processFile = useCallback((file: File) => {
     if (!acceptedTypes.includes(file.type)) {
@@ -22,7 +24,7 @@ export function ImageUpload({ onImageSelect, acceptedTypes = ['image/png', 'imag
     reader.onload = (e) => {
       const result = e.target?.result as string;
       setPreview(result);
-      onImageSelect(result);
+      onImageSelect(result, file.name);
     };
     reader.readAsDataURL(file);
   }, [acceptedTypes, onImageSelect]);
@@ -31,68 +33,53 @@ export function ImageUpload({ onImageSelect, acceptedTypes = ['image/png', 'imag
     e.preventDefault();
     setIsDragOver(false);
     const file = e.dataTransfer.files[0];
-    if (file) processFile(file);
+    if (file) {
+      processFile(file);
+    }
   }, [processFile]);
 
   const handleFileInput = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file) processFile(file);
+    if (file) {
+      processFile(file);
+    }
   }, [processFile]);
 
   return (
     <div className="image-upload">
       <h3>Upload Reference Image</h3>
 
-      <div className="category-selector">
-        <label>
-          <input
-            type="radio"
-            value="front-face"
-            checked={category === 'front-face'}
-            onChange={(e) => setCategory(e.target.value as ImageCategory)}
-          />
-          Front Face
-        </label>
-        <label>
-          <input
-            type="radio"
-            value="full-body"
-            checked={category === 'full-body'}
-            onChange={(e) => setCategory(e.target.value as ImageCategory)}
-          />
-          Full Body
-        </label>
-        <label>
-          <input
-            type="radio"
-            value="others"
-            checked={category === 'others'}
-            onChange={(e) => setCategory(e.target.value as ImageCategory)}
-          />
-          Others
-        </label>
-      </div>
-
       <div
-        className={`drop-zone ${isDragOver ? 'drag-over' : ''} ${preview ? 'has-preview' : ''}`}
+        className={`drop-zone ${isDragOver ? 'drag-over' : ''} ${preview ? 'has-preview' : ''} ${isDefaultPreview ? 'drop-zone-clickable' : ''}`}
         onDragOver={(e) => { e.preventDefault(); setIsDragOver(true); }}
         onDragLeave={() => setIsDragOver(false)}
         onDrop={handleDrop}
+        role="button"
+        aria-label={preview ? 'Click to change uploaded image' : 'Upload reference image. Drag and drop or click to choose a file.'}
+        tabIndex={0}
+        onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') fileInputRef.current?.click(); }}
+        onClick={() => {
+          if (isDefaultPreview) {
+            fileInputRef.current?.click();
+          }
+        }}
       >
+        {/* Hidden file input is always in the DOM so ref always works */}
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept={acceptedTypes.join(',')}
+          onChange={handleFileInput}
+          hidden
+        />
         {preview ? (
           <img src={preview} alt="Preview" className="preview-image" />
         ) : (
           <div className="drop-placeholder">
             <p>Drag & drop an image here, or</p>
-            <label className="file-input-label">
-              <input
-                type="file"
-                accept={acceptedTypes.join(',')}
-                onChange={handleFileInput}
-                hidden
-              />
-              <span className="button">Choose File</span>
-            </label>
+            <span className="button file-input-label" onClick={() => fileInputRef.current?.click()}>
+              Choose File
+            </span>
           </div>
         )}
       </div>
@@ -100,9 +87,10 @@ export function ImageUpload({ onImageSelect, acceptedTypes = ['image/png', 'imag
       {preview && (
         <button className="button secondary" onClick={() => {
           setPreview(null);
-          onImageSelect('');
+          onImageSelect('', '');
+          if (fileInputRef.current) fileInputRef.current.value = '';
         }}>
-          Remove Image
+          {isDefaultPreview ? 'Use your own image' : 'Remove Image'}
         </button>
       )}
     </div>

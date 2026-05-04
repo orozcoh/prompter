@@ -6,7 +6,7 @@
 [![Powered by](https://img.shields.io/badge/powered%20by-OpenRouter-orange)](https://openrouter.ai)
 [![x402 enabled](https://img.shields.io/badge/x402-enabled-green)](https://x402.org)
 
-Prompter is a free AI image generation platform that lets you transform reference images using curated prompt styles. Built on Cloudflare Workers with x402 protocol for trustless, pay-per-use payments.
+Prompter is an AI image generation platform that lets you transform reference images using curated prompt styles. Built on Cloudflare Workers with x402 protocol for trustless, pay-per-use payments.
 
 ---
 

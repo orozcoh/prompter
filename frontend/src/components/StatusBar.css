@@ -1,9 +1,16 @@
 .status-bar {
   display: flex;
   align-items: center;
-  padding: 0 1rem;
-  font-size: 0.875rem;
-  color: #9ca3af; /* gray-400 */
+  padding: 0 0.5rem;
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  user-select: none;
+}
+
+.status-bar:hover {
+  color: var(--color-neon-cyan);
 }
 
 .status-bar-item {
@@ -16,19 +23,21 @@
   width: 8px;
   height: 8px;
   border-radius: 50%;
+  flex-shrink: 0;
 }
 
 .dot-green {
-  background-color: #10b981; /* emerald-500 */
+  background-color: var(--color-success);
+  box-shadow: 0 0 6px rgba(0, 255, 102, 0.5);
 }
 
 .dot-gray {
-  background-color: #6b7280; /* gray-500 */
+  background-color: var(--color-text-muted);
 }
 
 .status-text {
-  font-family: monospace;
-  width: max-content;
+  font-family: var(--font-body);
+  white-space: nowrap;
 }
 
 .disconnect-btn {
@@ -36,12 +45,13 @@
   border: none;
   cursor: pointer;
   padding: 0 0.25rem;
-  font-size: 1rem;
-  color: #9ca3af;
-  transition: color 0.2s ease;
+  color: var(--color-text-secondary);
+  transition: color 0.2s;
+  display: inline-flex;
+  align-items: center;
   margin-left: 0.25rem;
 }
 
 .disconnect-btn:hover {
-  color: #ef4444;
+  color: var(--color-neon-amber);
 }

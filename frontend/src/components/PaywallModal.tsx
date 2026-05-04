@@ -1,4 +1,5 @@
 import './PaywallModal.css';
+import { X, CreditCard, Clipboard, AlertCircle, Check, Link2, ExternalLink, ShieldCheck, Info } from 'lucide-react';
 import type { PaymentRequiredResponse } from '../hooks/useX402Payment';
 
 interface PaywallModalProps {
@@ -59,23 +60,15 @@ export function PaywallModal({
   return (
     <div className="paywall-overlay" onClick={onClose}>
       <div className="paywall-modal" onClick={e => e.stopPropagation()}>
-        <button className="paywall-close" onClick={onClose}>
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-            <line x1="18" y1="6" x2="6" y2="18"/>
-            <line x1="6" y1="6" x2="18" y2="18"/>
-          </svg>
+        <button className="paywall-close" onClick={onClose} aria-label="Close">
+          <X size={24} />
         </button>
 
         <div className="paywall-content">
           {/* Header */}
           <div className="paywall-header">
             <div className="paywall-icon">
-              <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
-                <rect x="3" y="6" width="18" height="12" rx="2"/>
-                <path d="M3 10h18"/>
-                <path d="M7 15h.01"/>
-                <path d="M11 15h2"/>
-              </svg>
+              <CreditCard size={48} />
             </div>
             <h2>Payment Required</h2>
             <p className="paywall-subtitle">Complete payment to generate your AI image</p>
@@ -107,10 +100,7 @@ export function PaywallModal({
                     onClick={() => copyToClipboard(scheme.payTo)}
                     title="Copy address"
                   >
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                      <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
-                      <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
-                    </svg>
+                    <Clipboard size={14} />
                   </button>
                 </div>
               </div>
@@ -124,11 +114,7 @@ export function PaywallModal({
           {/* Error Display */}
           {error && (
             <div className="payment-error">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <circle cx="12" cy="12" r="10"/>
-                <line x1="12" y1="8" x2="12" y2="12"/>
-                <line x1="12" y1="16" x2="12.01" y2="16"/>
-              </svg>
+              <AlertCircle size={20} />
               <span>{error}</span>
             </div>
           )}
@@ -141,9 +127,7 @@ export function PaywallModal({
                 {isConnecting ? (
                   <div className="step-spinner"/>
                 ) : isConnected ? (
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
-                    <polyline points="20 6 9 17 4 12"/>
-                  </svg>
+                  <Check size={20} />
                 ) : (
                   <span>1</span>
                 )}
@@ -152,12 +136,7 @@ export function PaywallModal({
                 <span className="step-title">Connect Wallet</span>
                 {isConnected && walletAddress && (
                   <span className="step-subtitle">
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                      <path d="M20 7h-9"/>
-                      <path d="M14 17H5"/>
-                      <circle cx="17" cy="17" r="3"/>
-                      <circle cx="7" cy="7" r="3"/>
-                    </svg>
+                    <Link2 size={14} />
                     {formatAddress(walletAddress)}
                   </span>
                 )}
@@ -181,9 +160,7 @@ export function PaywallModal({
                 ) : isVerifying ? (
                   <div className="step-spinner"/>
                 ) : isPaid ? (
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
-                    <polyline points="20 6 9 17 4 12"/>
-                  </svg>
+                  <Check size={20} />
                 ) : (
                   <span>2</span>
                 )}
@@ -194,19 +171,13 @@ export function PaywallModal({
                 </span>
                 {isPaid && (
                   <span className="step-subtitle">
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                      <polyline points="20 6 9 17 4 12"/>
-                    </svg>
+                    <Check size={14} />
                     Payment sent
                   </span>
                 )}
                 {txHash && (
                   <a href={explorerUrl!} target="_blank" rel="noopener noreferrer" className="tx-link">
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                      <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/>
-                      <polyline points="15 3 21 3 21 9"/>
-                      <line x1="10" y1="14" x2="21" y2="3"/>
-                    </svg>
+                    <ExternalLink size={12} />
                     View on Basescan
                   </a>
                 )}
@@ -226,10 +197,7 @@ export function PaywallModal({
           {/* Success State */}
           {isPaid && !isVerifying && (
             <div className="payment-success">
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
-                <polyline points="22 4 12 14.01 9 11.01"/>
-              </svg>
+              <ShieldCheck size={24} />
               <span>Payment verified! Generating your image...</span>
             </div>
           )}
@@ -245,11 +213,7 @@ export function PaywallModal({
           {/* Footer Info */}
           <div className="paywall-footer">
             <p>
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <circle cx="12" cy="12" r="10"/>
-                <line x1="12" y1="16" x2="12" y2="12"/>
-                <line x1="12" y1="8" x2="12.01" y2="8"/>
-              </svg>
+              <Info size={14} />
               Secure payment powered by x402 Protocol
             </p>
           </div>

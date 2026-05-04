@@ -36,6 +36,15 @@ app.use('*', cors({
   exposeHeaders: ['PAYMENT-REQUIRED', 'x402-payment-required'],
 }));
 
+// Security headers
+app.use('*', async (c, next) => {
+  await next();
+  c.res.headers.set('X-Content-Type-Options', 'nosniff');
+  c.res.headers.set('X-Frame-Options', 'DENY');
+  c.res.headers.set('Referrer-Policy', 'strict-origin-when-cross-origin');
+  c.res.headers.set('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
+});
+
 // Helper to generate x402 payment required data
 function createPaymentRequiredData(priceUsd: string, payTo: string, resourceUrl: string) {
   const parsedPrice = parseFloat(priceUsd);
@@ -106,9 +115,10 @@ async function generateImage(
   });
 
   if (!openrouterResponse.ok) {
-    const error = await openrouterResponse.text();
-    console.error('OpenRouter error:', error);
-    return c.json({ error: `OpenRouter API error: ${error}` }, 500);
+    const errorBody = await openrouterResponse.text();
+    const status = openrouterResponse.status;
+    console.error(`OpenRouter error (${status}):`, errorBody);
+    return c.json({ error: 'Image generation service temporarily unavailable' }, 502);
   }
 
   const result = (await openrouterResponse.json()) as any;
@@ -125,6 +135,8 @@ async function generateImage(
   const response: any = {
     success: true,
     promptId,
+    cost: c.env.X402_PRICE_USD,
+    model: c.env.GENERATION_MODEL || 'sourceful/riverflow-v2-fast-preview',
     apiResponse: cleanedResult,
   };
 
@@ -223,8 +235,9 @@ app.post('/generate', async (c) => {
         },
       }
     );
-  } catch (error) {
-    return c.json({ error: `Request failed: ${error}` }, 500);
+  } catch (error: any) {
+    console.error('Generate request error:', error);
+    return c.json({ error: 'Invalid request' }, 400);
   }
 });
 

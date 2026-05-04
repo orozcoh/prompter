@@ -1,4 +1,5 @@
 import React from 'react';
+import { LogOut } from 'lucide-react';
 import { useWallet } from '../context/WalletContext';
 import './StatusBar.css';
 
@@ -27,7 +28,14 @@ export function StatusBar({ onConnectClick }: StatusBarProps) {
   };
 
   return (
-    <div className="status-bar" onClick={handleStatusBarClick}>
+    <div
+      className="status-bar"
+      onClick={handleStatusBarClick}
+      role="button"
+      tabIndex={0}
+      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') handleStatusBarClick(); }}
+      aria-label={isConnected ? `Connected: ${formatAddress(walletAddress)}` : 'Wallet not connected. Click to connect.'}
+    >
       <div className="status-bar-item">
         <span 
           className={`status-dot ${isConnected ? 'dot-green' : 'dot-gray'}`}
@@ -40,11 +48,12 @@ export function StatusBar({ onConnectClick }: StatusBarProps) {
                 className="disconnect-btn"
                 onClick={handleDisconnect}
                 title="Disconnect wallet"
+                aria-label="Disconnect wallet"
               >
-                🚪
+                <LogOut size={14} />
               </button>
             </>
-          ) : <span style={{cursor: "pointer"}}>Not connected</span>}
+          ) : <span className="status-text">Not connected</span>}
         </span>
       </div>
     </div>

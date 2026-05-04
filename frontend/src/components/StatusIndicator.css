@@ -2,53 +2,63 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 8px;
-  padding: 16px 24px;
-  border-radius: 12px;
-  border: 2px solid;
-  background: rgba(255, 255, 255, 0.05);
-  animation: fadeIn 0.3s ease;
+  gap: var(--space-2);
+  padding: var(--space-4) var(--space-6);
+  border-radius: var(--radius-lg);
+  border: 1px solid;
+  background: var(--color-surface);
+  animation: fade-in 0.3s ease;
+  font-family: var(--font-body);
 }
 
-@keyframes fadeIn {
-  from {
-    opacity: 0;
-    transform: translateY(-10px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+.status-indicator.status-generating {
+  border-color: var(--color-neon-cyan);
+  color: var(--color-neon-cyan);
+  box-shadow: var(--glow-cyan-sm);
+}
+
+.status-indicator.status-completed {
+  border-color: var(--color-success);
+  color: var(--color-success);
+}
+
+.status-indicator.status-error {
+  border-color: var(--color-error);
+  color: var(--color-error);
+}
+
+.status-indicator.status-payment_required {
+  border-color: var(--color-neon-amber);
+  color: var(--color-neon-amber);
+  box-shadow: var(--glow-amber-sm);
 }
 
 .status-icon {
   font-size: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .status-label {
-  font-size: 14px;
+  font-size: var(--text-sm);
   font-weight: 500;
   text-align: center;
 }
 
 .status-error {
-  font-size: 12px;
-  color: #ef4444;
+  font-size: var(--text-xs);
+  color: var(--color-error);
   text-align: center;
   max-width: 300px;
 }
 
+/* Pulse animation for generating state */
 .status-generating .status-icon {
-  animation: pulse 1s ease-in-out infinite;
+  animation: neon-pulse 1.5s ease-in-out infinite;
 }
 
-@keyframes pulse {
-  0%, 100% {
-    opacity: 1;
-    transform: scale(1);
-  }
-  50% {
-    opacity: 0.5;
-    transform: scale(1.1);
-  }
+/* Data stream dots in generating status */
+.status-indicator .data-stream {
+  margin-top: var(--space-1);
 }

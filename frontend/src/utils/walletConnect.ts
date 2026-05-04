@@ -2,8 +2,6 @@ import EthereumProvider from '@walletconnect/ethereum-provider';
 import { type Address } from 'viem';
 
 // WalletConnect project ID (required for WalletConnect Cloud)
-// Get your own from https://cloud.walletconnect.com - it's free and safe to expose client-side
-// For local development without a valid ID, WalletConnect will still work but without analytics
 const PROJECT_ID = import.meta.env.VITE_WALLETCONNECT_PROJECT_ID || '513332cf5c05e1de19195e7dd676a213';
 
 // Required chains for Base Mainnet
