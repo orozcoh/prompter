@@ -5,7 +5,7 @@ import { VitePWA } from 'vite-plugin-pwa';
 import path from 'path';
 
 // https://vite.dev/config/
-export default defineConfig({
+export default defineConfig(({ mode }) => ({
   plugins: [
     react(),
     nodePolyfills({
@@ -71,7 +71,7 @@ export default defineConfig({
   ],
   server: {
     port: 3000,
-    proxy: process.env.NODE_ENV === 'production' ? {} : {
+    proxy: {
       '/api': {
         target: 'http://localhost:8787',
         changeOrigin: true,
@@ -86,6 +86,6 @@ export default defineConfig({
   },
   build: {
     outDir: 'dist',
-    sourcemap: true,
+    sourcemap: mode !== 'production',
   },
-});
+}));
