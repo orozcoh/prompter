@@ -28,3 +28,10 @@ bucket_name = "prompter-images"
 # MIN_CONFIRMATIONS = "3"
 
 workers_dev = false
+
+X402_PRICE_USD="0.05"
+X402_PAY_TO_ADDRESS="0x7B3193eEb2d754d126b70A1F184659D52740D306"
+
+# On-chain verification config
+BASE_RPC_URL="https://base-mainnet.g.alchemy.com/v2/"
+MIN_CONFIRMATIONS="2"
