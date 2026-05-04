@@ -186,12 +186,62 @@ wrangler r2 object put prompter-images/prompt-1.jpg --file=./path/to/image.jpg
 
 ## 🌍 Deployment
 
-```bash
-# Build both frontend and worker
-bun run build
+Prompter uses a **split deployment** model: the backend is a Cloudflare Worker (API only), and the frontend is a separate Cloudflare Pages project.
 
-# Deploy worker to Cloudflare
+### Architecture
+
+```
+Browser ──▶ prompter-frontend.pages.dev (static SPA)
+                │
+                ▼ API calls (VITE_API_URL)
+            prompter-worker.digitalerror.xyz (Worker: /prompts, /generate, /verify-payment)
+```
+
+### Deploy the Worker (API)
+
+```bash
+# One-time: create KV namespace and R2 bucket (see Setup section)
+wrangler kv namespace create PROMPTS_KV
+wrangler r2 bucket create prompter-images
+
+# Set secrets (one-time)
+wrangler secret put OPENROUTER_API_KEY
+
+# Deploy
 bun run deploy
+```
+
+### Deploy the Frontend (Pages)
+
+```bash
+# One-time: create the Pages project
+wrangler pages project create prompter-frontend
+
+# Build and deploy (repeat on every update)
+bun run deploy:frontend
+```
+
+The `_redirects` file (`/* /index.html 200`) handles SPA client-side routing so `/about`, `/myImages`, etc. work without 404s.
+
+### Set the Frontend API URL
+
+Before deploying, configure the Worker URL in `frontend/.env.production`:
+
+```env
+VITE_API_URL=https://prompter-worker.digitalerror.xyz
+```
+
+### All-in-One (first time)
+
+```bash
+# 1. Create Pages project
+wrangler pages project create prompter-frontend
+
+# 2. Deploy Worker
+bun run deploy
+
+# 3. Deploy Frontend
+bun run deploy:frontend
 ```
 
 ---
