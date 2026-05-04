@@ -1,14 +1,18 @@
-name = "prompter"
+name = "prompter-worker"
 main = "worker/index.ts"
 compatibility_date = "2024-09-23"
 compatibility_flags = ["nodejs_compat"]
 
 # KV namespace for prompt storage
-# Create with: bunx wrangler kv:namespace create PROMPTS_KV
+# Create with: wrangler kv:namespace create PROMPTS_KV
 # Then update the id below with the created namespace ID
 [[kv_namespaces]]
 binding = "PROMPTS_KV"
 id = "0c92dbff33824820890d7b92384856a6"
+
+[[kv_namespaces]]
+binding = "TXHASH_REGISTRY_KV"
+id = "457b79cb5aff4b50b4ced930adf0119f"
 
 [[r2_buckets]]
 binding = "IMAGES_R2"
@@ -19,6 +23,8 @@ bucket_name = "prompter-images"
 # Base RPC URL - use Sepolia for testing, Mainnet for production
 # Base Sepolia: https://sepolia.base.org
 # Base Mainnet: https://mainnet.base.org
-BASE_RPC_URL = "https://mainnet.base.org"
+# BASE_RPC_URL = "https://mainnet.base.org"
 # Minimum confirmations required before accepting payment
-MIN_CONFIRMATIONS = "3"
+# MIN_CONFIRMATIONS = "3"
+
+workers_dev = false

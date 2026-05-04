@@ -6,6 +6,7 @@
     "dev": "wrangler dev",
     "dev:local": "bun run worker/dev.ts",
     "deploy": "wrangler deploy",
+    "deploy:frontend": "cd frontend && bun run build && wrangler pages deploy dist --project-name=prompter-frontend",
     "build:worker": "wrangler deploy --dry-run",
     "build:frontend": "cd frontend && bun run build",
     "build": "bun run build:frontend && bun run build:worker",
