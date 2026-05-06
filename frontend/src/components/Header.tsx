@@ -15,13 +15,13 @@ const Header: React.FC<HeaderProps> = ({ isMenuOpen, onMenuClick, onConnectClick
   return (
   <header className="app-header">
     <div className="header-left">
-      <Link to="/" className="header-logo-link">
-        <img src={favicon} alt="Prompter Logo" className="header-logo" />
+      <Link to="/" className="header-logo-link" aria-label="Prompter home">
+        <img src={favicon} alt="Prompter Logo" className="header-logo" width="32" height="32" />
       </Link>
     </div>
     
     <div className="header-center">
-      <h1 className="header-title glitch-hover" data-text="Prompter">Prompter</h1>
+      <div className="header-title glitch-hover" data-text="Prompter">Prompter</div>
     </div>
     
     <div className="header-right">

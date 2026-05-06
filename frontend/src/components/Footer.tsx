@@ -7,6 +7,8 @@ const Footer = () => {
         &copy; 2026 -{' '}
         <a
           href="https://digitalerror.xyz"
+          target="_blank"
+          rel="noopener noreferrer"
           className="footer-link"
         >
           DigitalError.xyz

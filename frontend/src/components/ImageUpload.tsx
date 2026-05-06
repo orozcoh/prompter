@@ -47,7 +47,7 @@ export function ImageUpload({ onImageSelect, acceptedTypes = ['image/png', 'imag
 
   return (
     <div className="image-upload">
-      <h3>Upload Reference Image</h3>
+      <h2>Upload Reference Image</h2>
 
       <div
         className={`drop-zone ${isDragOver ? 'drag-over' : ''} ${preview ? 'has-preview' : ''} ${isDefaultPreview ? 'drop-zone-clickable' : ''}`}
@@ -73,7 +73,7 @@ export function ImageUpload({ onImageSelect, acceptedTypes = ['image/png', 'imag
           hidden
         />
         {preview ? (
-          <img src={preview} alt="Preview" className="preview-image" />
+          <img src={preview} alt="Preview" className="preview-image" loading="lazy" />
         ) : (
           <div className="drop-placeholder">
             <p>Drag & drop an image here, or</p>
