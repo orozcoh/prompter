@@ -7,7 +7,7 @@ interface SEOProps {
   ogImage?: string;
 }
 
-const BASE_URL = 'https://prompter.digitalerror.xyz';
+const BASE_URL = import.meta.env.VITE_UI_BASE_URL || 'http://localhost:3000';
 
 export function SEO({ title, description, path, ogImage }: SEOProps) {
   const fullTitle = `${title} | Prompter`;
