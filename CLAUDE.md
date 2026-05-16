@@ -130,7 +130,7 @@ Vite proxy in `frontend/vite.config.ts` rewrites `/api/*` to `http://localhost:8
 
 **Local Development (.env):**
 - `LOCAL_DEV_BYPASS_PAYMENT` - Set to `true` to skip payment validation
-- `X402_PRICE_USD` - Payment amount in USD (default: `0.001`)
+- `X402_LOW_PRICE_USD` / `X402_HIGH_PRICE_USD` - Tier-specific prices in USD
 - `X402_PAY_TO_ADDRESS` - USDC recipient address
 
 **Frontend:**

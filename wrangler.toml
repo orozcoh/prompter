@@ -2,6 +2,7 @@ name = "prompter-worker"
 main = "worker/index.ts"
 compatibility_date = "2024-09-23"
 compatibility_flags = ["nodejs_compat"]
+workers_dev = false
 
 # KV namespace for prompt storage
 # Create with: wrangler kv:namespace create PROMPTS_KV
@@ -18,20 +19,18 @@ id = "457b79cb5aff4b50b4ced930adf0119f"
 binding = "IMAGES_R2"
 bucket_name = "prompter-images"
 
+[[r2_buckets]]
+binding = "GENERATED_IMAGES_R2"
+bucket_name = "prompter-generated"
+
 # Environment variables (can be overridden with wrangler secret put or .dev.vars)
 [vars]
-# Base RPC URL - use Sepolia for testing, Mainnet for production
-# Base Sepolia: https://sepolia.base.org
-# Base Mainnet: https://mainnet.base.org
-# BASE_RPC_URL = "https://mainnet.base.org"
-# Minimum confirmations required before accepting payment
-# MIN_CONFIRMATIONS = "3"
+GENERATION_LOW_MODEL = "sourceful/riverflow-v2-fast"
+GENERATION_HIGH_MODEL = "google/gemini-3.1-flash-image-preview"
 
-workers_dev = false
+X402_LOW_PRICE_USD="0.1"
+X402_HIGH_PRICE_USD="0.2"
 
-X402_PRICE_USD="0.05"
-X402_LOW_PRICE_USD="0.01"
-X402_HIGH_PRICE_USD="0.05"
 X402_PAY_TO_ADDRESS="0x7B3193eEb2d754d126b70A1F184659D52740D306"
 
 # On-chain verification config

@@ -258,7 +258,8 @@ export function useX402Payment() {
     txHash: string,
     promptId: string,
     referenceImage?: string,
-    modelTier?: string
+    modelTier?: string,
+    generationId?: string
   ): Promise<Response> => {
     setState(prev => ({ ...prev, isVerifying: true, error: null }));
 
@@ -273,6 +274,7 @@ export function useX402Payment() {
           promptId,
           referenceImage,
           modelTier,
+          generationId,
         }),
       });
 

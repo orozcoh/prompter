@@ -7,13 +7,14 @@ import { verifyPayment, type PaymentVerificationParams } from './utils/verifyPay
 export type Env = {
   PROMPTS_KV: KVNamespace;
   TXHASH_REGISTRY_KV: KVNamespace;
+  IMAGES_R2: R2Bucket;
+  GENERATED_IMAGES_R2: R2Bucket;
   OPENROUTER_API_KEY: string;
   GENERATION_MODEL?: string;
   GENERATION_LOW_MODEL?: string;
   GENERATION_HIGH_MODEL?: string;
-  X402_PRICE_USD: string;
-  X402_LOW_PRICE_USD?: string;
-  X402_HIGH_PRICE_USD?: string;
+  X402_LOW_PRICE_USD: string;
+  X402_HIGH_PRICE_USD: string;
   X402_PAY_TO_ADDRESS: string;
   LOCAL_DEV_BYPASS_PAYMENT?: string;
   BASE_RPC_URL?: string;
@@ -24,12 +25,12 @@ function getModelAndPrice(env: Env, tier?: string) {
   if (tier === 'high') {
     return {
       model: env.GENERATION_HIGH_MODEL || env.GENERATION_MODEL || 'sourceful/riverflow-v2-fast-preview',
-      price: env.X402_HIGH_PRICE_USD || env.X402_PRICE_USD,
+      price: env.X402_HIGH_PRICE_USD,
     };
   }
   return {
     model: env.GENERATION_LOW_MODEL || env.GENERATION_MODEL || 'sourceful/riverflow-v2-fast-preview',
-    price: env.X402_LOW_PRICE_USD || env.X402_PRICE_USD,
+    price: env.X402_LOW_PRICE_USD,
   };
 }
 
@@ -45,6 +46,7 @@ interface VerifyPaymentRequest {
   promptId: string;
   referenceImage?: string;
   modelTier?: string;
+  generationId?: string;
 }
 
 const app = new Hono<{ Bindings: Env }>();
@@ -52,7 +54,11 @@ const app = new Hono<{ Bindings: Env }>();
 // CORS for frontend access - expose PAYMENT-REQUIRED header for x402
 app.use('*', cors({
   origin: '*',
-  exposeHeaders: ['PAYMENT-REQUIRED', 'x402-payment-required'],
+  exposeHeaders: [
+    'PAYMENT-REQUIRED', 'x402-payment-required',
+    'X-Meta-promptId', 'X-Meta-promptName',
+    'X-Meta-model', 'X-Meta-cost', 'X-Meta-txHash',
+  ],
 }));
 
 // Security headers
@@ -68,7 +74,7 @@ app.use('*', async (c, next) => {
 function createPaymentRequiredData(priceUsd: string, payTo: string, resourceUrl: string) {
   const parsedPrice = parseFloat(priceUsd);
   if (isNaN(parsedPrice)) {
-    throw new Error(`Invalid X402_PRICE_USD value: ${priceUsd}`);
+    throw new Error(`Invalid price value: ${priceUsd}`);
   }
   const amountRaw = BigInt(Math.floor(parsedPrice * 1e6)); // USDC has 6 decimals
 
@@ -98,14 +104,111 @@ function createPaymentRequiredData(priceUsd: string, payTo: string, resourceUrl:
   };
 }
 
-// Helper function to generate image using OpenRouter
+function extractImageFromResponse(result: unknown): string | undefined {
+  const msg = (result as any)?.choices?.[0]?.message;
+  if (!msg) return undefined;
+
+  if (msg.images && Array.isArray(msg.images)) {
+    for (const image of msg.images) {
+      if (image.image_url?.url) return image.image_url.url;
+    }
+  }
+
+  if (typeof msg.content === 'string') {
+    const content = msg.content.trim();
+    if (content.startsWith('http') || content.startsWith('data:image')) return content;
+    if (/^[A-Za-z0-9+/=\n\r]+$/.test(content) && content.length > 1000) return `data:image/png;base64,${content}`;
+  }
+
+  if (Array.isArray(msg.content)) {
+    for (const part of msg.content) {
+      if (typeof part.image_url === 'string') return part.image_url;
+      if (typeof part.image_url === 'object' && part.image_url?.url) return part.image_url.url;
+      if (part.type === 'image' && part.data) return `data:image/png;base64,${part.data}`;
+      if (part.part?.inlineData?.data) {
+        const mime = part.part.inlineData.mimeType || 'image/png';
+        return `data:${mime};base64,${part.part.inlineData.data}`;
+      }
+      if (part.text) {
+        const txt = part.text.trim();
+        if (/^[A-Za-z0-9+/=\n\r]+$/.test(txt) && txt.length > 1000) return `data:image/png;base64,${txt}`;
+      }
+    }
+  }
+
+  if (msg.image_url) {
+    return typeof msg.image_url === 'string' ? msg.image_url : msg.image_url?.url;
+  }
+
+  if (msg.parts) {
+    for (const part of msg.parts) {
+      if (part.inlineData?.data) {
+        const mime = part.inlineData.mimeType || 'image/png';
+        return `data:${mime};base64,${part.inlineData.data}`;
+      }
+      if (part.text) {
+        const txt = part.text.trim();
+        if (/^[A-Za-z0-9+/=\n\r]+$/.test(txt) && txt.length > 1000) return `data:image/png;base64,${txt}`;
+      }
+    }
+  }
+
+  return undefined;
+}
+
+async function cacheImageInR2(
+  env: Env,
+  generationId: string,
+  apiResponse: unknown,
+  meta: { promptId: string; promptName: string; model: string; cost: string; txHash?: string }
+): Promise<void> {
+  try {
+    const imageUrl = extractImageFromResponse(apiResponse);
+    if (!imageUrl) return;
+
+    let arrayBuffer: ArrayBuffer;
+    let contentType = 'image/png';
+
+    if (imageUrl.startsWith('data:')) {
+      const [, mimePart, encoded] = imageUrl.match(/^data:([^;]+);base64,(.+)$/) || [];
+      if (mimePart) contentType = mimePart;
+      const base64 = encoded || imageUrl.split(',')[1] || '';
+      const binary = atob(base64);
+      const bytes = new Uint8Array(binary.length);
+      for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+      arrayBuffer = bytes.buffer;
+    } else {
+      const res = await fetch(imageUrl);
+      if (!res.ok) return;
+      const ct = res.headers.get('Content-Type');
+      if (ct) contentType = ct;
+      arrayBuffer = await res.arrayBuffer();
+    }
+
+    const customMetadata: Record<string, string> = {
+      promptId: meta.promptId,
+      promptName: meta.promptName,
+      model: meta.model,
+      cost: meta.cost,
+    };
+    if (meta.txHash) customMetadata.txHash = meta.txHash;
+
+    await env.GENERATED_IMAGES_R2.put(generationId, arrayBuffer, {
+      httpMetadata: { contentType },
+      customMetadata,
+    });
+  } catch (e) {
+    console.error('R2 cache failed:', e);
+  }
+}
 async function generateImage(
   c: any,
   model: string,
   price: string,
   promptId: string,
   referenceImage?: string,
-  paymentInfo?: { amount: string; confirmations: number; from: string; txHash: string }
+  paymentInfo?: { amount: string; confirmations: number; from: string; txHash: string },
+  generationId?: string
 ) {
   // Get the prompt from KV
   const promptData = await c.env.PROMPTS_KV.get(promptId, 'json') as PromptData | null;
@@ -171,6 +274,23 @@ async function generateImage(
     };
   }
 
+  // Add generationId to response so client knows it for reconnect
+  if (generationId) {
+    response.generationId = generationId;
+    const cachePromise = cacheImageInR2(c.env as Env, generationId, cleanedResult, {
+      promptId,
+      promptName: promptData.name,
+      model,
+      cost: price,
+      txHash: paymentInfo?.txHash,
+    });
+    try {
+      c.executionCtx.waitUntil(cachePromise);
+    } catch {
+      cachePromise.catch(e => console.error('R2 cache failed:', e));
+    }
+  }
+
   return c.json(response);
 }
 
@@ -229,7 +349,7 @@ app.get('/models', (c) => {
 app.post('/generate', async (c) => {
   try {
     const body = await c.req.json();
-    const { promptId, referenceImage, txHash, modelTier } = body;
+    const { promptId, referenceImage, txHash, modelTier, generationId } = body;
 
     if (!promptId) {
       return c.json({ error: 'Prompt ID required' }, 400);
@@ -250,7 +370,7 @@ app.post('/generate', async (c) => {
 
     if (bypassPayment) {
       // Skip payment - generate directly
-      return await generateImage(c, model, price, promptId, referenceImage);
+      return await generateImage(c, model, price, promptId, referenceImage, undefined, generationId);
     }
 
     // If no txHash, return payment required (402) with payment details
@@ -286,7 +406,7 @@ app.post('/generate', async (c) => {
 app.post('/verify-payment', async (c) => {
   try {
     const body = await c.req.json() as VerifyPaymentRequest;
-    const { txHash, promptId, referenceImage, modelTier } = body;
+    const { txHash, promptId, referenceImage, modelTier, generationId } = body;
 
     // Log incoming transaction
     console.log(`tx: ${txHash}`);
@@ -357,12 +477,44 @@ app.post('/verify-payment', async (c) => {
       amount: verification.amount || '0',
       confirmations: verification.confirmations || 0,
       from: verification.from || '',
-    });
+    }, generationId);
     return result;
   } catch (error: any) {
     console.error('Verify payment error:', error);
     return c.json({ error: `Verification failed: ${error.message || error}` }, 500);
   }
+});
+
+// Serve prompt reference images from IMAGES_R2
+app.get('/images/:key', async (c) => {
+  const key = c.req.param('key');
+  const object = await c.env.IMAGES_R2.get(key);
+  if (!object) return c.json({ error: 'Image not found' }, 404);
+
+  return new Response(object.body, {
+    headers: {
+      'Content-Type': object.httpMetadata?.contentType || 'image/png',
+      'Cache-Control': 'public, max-age=31536000, immutable',
+    },
+  });
+});
+
+// Retrieve a generated image from GENERATED_IMAGES_R2 (reconnect buffer)
+app.get('/generated-images/:key', async (c) => {
+  const key = c.req.param('key');
+  const object = await c.env.GENERATED_IMAGES_R2.get(key);
+  if (!object) return c.json({ error: 'Image not found or expired' }, 404);
+
+  const headers = new Headers();
+  headers.set('Content-Type', object.httpMetadata?.contentType || 'image/png');
+
+  if (object.customMetadata) {
+    for (const [k, v] of Object.entries(object.customMetadata)) {
+      if (v !== undefined) headers.set(`X-Meta-${k}`, v);
+    }
+  }
+
+  return new Response(object.body, { headers });
 });
 
 export default app;

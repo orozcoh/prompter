@@ -9,7 +9,7 @@ import { SEO } from '../components/SEO';
 import { useWallet } from '../context/WalletContext';
 import { useImages } from '../context/ImagesContext';
 import { extractImageUrl } from '../utils/extractImageUrl';
-import { urlToBase64 } from '../utils/imageStorage';
+import { urlToBase64, addPendingGeneration, removePendingGeneration, getPendingGenerations, getImageByGenerationId, type PendingGeneration } from '../utils/imageStorage';
 
 interface Prompt {
   id: string;
@@ -62,8 +62,70 @@ const HomePage = ({ onConnectWallet }: HomePageProps) => {
 
   const [selectedPromptForPayment, setSelectedPromptForPayment] = useState<Prompt | null>(null);
 
+  const makeFileName = (promptName: string) => {
+    if (originalFileName) {
+      const baseName = originalFileName.replace(/\.[^.]+$/, '');
+      const sanitized = promptName.replace(/\s+/g, '-').replace(/[^a-zA-Z0-9_-]/g, '');
+      return `${baseName}_${sanitized}.png`;
+    }
+    return `generated-${Date.now()}.png`;
+  };
+
   useEffect(() => {
     fetchPrompts();
+  }, []);
+
+  useEffect(() => {
+    const pending = getPendingGenerations();
+    if (pending.length === 0) return;
+
+    const retrievePending = async () => {
+      for (const p of pending) {
+        try {
+          const alreadySaved = await getImageByGenerationId(p.generationId);
+          if (alreadySaved) {
+            removePendingGeneration(p.generationId);
+            continue;
+          }
+
+          const res = await fetch(`${API_BASE}/generated-images/${p.generationId}`);
+          if (!res.ok) continue;
+
+          const blob = await res.blob();
+          const base64Url = await new Promise<string>((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onloadend = () => resolve(reader.result as string);
+            reader.onerror = reject;
+            reader.readAsDataURL(blob);
+          });
+
+          const metaPromptName = res.headers.get('X-Meta-promptName') || p.promptName;
+          const metaPromptId = res.headers.get('X-Meta-promptId') || p.promptId;
+          const metaModel = res.headers.get('X-Meta-model') || p.model;
+          const metaCost = res.headers.get('X-Meta-cost') || p.cost;
+          const metaTxHash = res.headers.get('X-Meta-txHash') || p.txHash;
+
+          addImage({
+            id: crypto.randomUUID(),
+            imageUrl: base64Url,
+            promptId: metaPromptId || '',
+            promptName: metaPromptName || 'Unknown',
+            fileName: p.fileName || `retrieved-${Date.now()}.png`,
+            timestamp: Date.now(),
+            model: metaModel,
+            cost: metaCost,
+            txHash: metaTxHash,
+            generationId: p.generationId,
+          });
+          removePendingGeneration(p.generationId);
+        } catch {
+          // Retry on next mount or leave for lifecycle cleanup
+        }
+      }
+    };
+
+    retrievePending();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const fetchPrompts = async () => {
@@ -81,6 +143,15 @@ const HomePage = ({ onConnectWallet }: HomePageProps) => {
     setError(null);
     setSelectedPromptForPayment(prompt);
 
+    const generationId = crypto.randomUUID();
+    const pending: PendingGeneration = {
+      generationId,
+      promptId: prompt.id,
+      promptName: prompt.name,
+      fileName: makeFileName(prompt.name),
+    };
+    addPendingGeneration(pending);
+
     try {
       const response = await fetch(`${API_BASE}/generate`, {
         method: 'POST',
@@ -88,6 +159,7 @@ const HomePage = ({ onConnectWallet }: HomePageProps) => {
         body: JSON.stringify({
           promptId: prompt.id,
           modelTier,
+          generationId,
         }),
       });
 
@@ -95,6 +167,7 @@ const HomePage = ({ onConnectWallet }: HomePageProps) => {
         const paymentReq = await parsePaymentRequired(response);
         if (paymentReq) {
           setGenerationStatus('payment_required');
+          removePendingGeneration(generationId);
           return;
         } else {
           throw new Error('Payment required but could not parse payment details');
@@ -112,24 +185,18 @@ const HomePage = ({ onConnectWallet }: HomePageProps) => {
       }
 
       urlToBase64(imageUrl).then(base64Url => {
-        let fileName = `generated-${Date.now()}.png`;
-        if (originalFileName) {
-          const baseName = originalFileName.replace(/\.[^.]+$/, '');
-          const sanitizedPromptName = prompt.name
-            .replace(/\s+/g, '-')
-            .replace(/[^a-zA-Z0-9_-]/g, '');
-          fileName = `${baseName}_${sanitizedPromptName}.png`;
-        }
         addImage({
           id: crypto.randomUUID(),
           imageUrl: base64Url,
           promptId: prompt.id,
           promptName: prompt.name,
-          fileName,
+          fileName: pending.fileName,
           timestamp: Date.now(),
           cost: data.cost,
           model: data.model,
+          generationId,
         });
+        removePendingGeneration(generationId);
       }).catch(console.error);
 
       setResult({
@@ -141,11 +208,21 @@ const HomePage = ({ onConnectWallet }: HomePageProps) => {
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Generation failed');
       setGenerationStatus('error');
+      removePendingGeneration(generationId);
     }
   }, [referenceImage, parsePaymentRequired, addImage, modelTier]);
 
   const handleGenerateWithPayment = useCallback(async () => {
     if (!paymentRequired || !selectedPromptForPayment) return;
+
+    const generationId = crypto.randomUUID();
+    const pending: PendingGeneration = {
+      generationId,
+      promptId: selectedPromptForPayment.id,
+      promptName: selectedPromptForPayment.name,
+      fileName: makeFileName(selectedPromptForPayment.name),
+    };
+    addPendingGeneration(pending);
 
     try {
       const scheme = paymentRequired.schemes[0];
@@ -162,7 +239,8 @@ const HomePage = ({ onConnectWallet }: HomePageProps) => {
         hash,
         selectedPromptForPayment.id,
         referenceImage,
-        modelTier
+        modelTier,
+        generationId
       );
 
       const data = await response.json();
@@ -176,25 +254,19 @@ const HomePage = ({ onConnectWallet }: HomePageProps) => {
       }
 
       urlToBase64(imageUrl).then(base64Url => {
-        let fileName = `generated-${Date.now()}.png`;
-        if (originalFileName) {
-          const baseName = originalFileName.replace(/\.[^.]+$/, '');
-          const sanitizedPromptName = selectedPromptForPayment.name
-            .replace(/\s+/g, '-')
-            .replace(/[^a-zA-Z0-9_-]/g, '');
-          fileName = `${baseName}_${sanitizedPromptName}.png`;
-        }
         addImage({
           id: crypto.randomUUID(),
           imageUrl: base64Url,
           promptId: selectedPromptForPayment.id,
           promptName: selectedPromptForPayment.name,
-          fileName,
+          fileName: pending.fileName,
           timestamp: Date.now(),
           txHash: data.txHash || hash,
           cost: data.cost,
           model: data.model,
+          generationId,
         });
+        removePendingGeneration(generationId);
       }).catch(console.error);
 
       setResult({
@@ -208,6 +280,7 @@ const HomePage = ({ onConnectWallet }: HomePageProps) => {
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Payment/Generation failed');
       setGenerationStatus('error');
+      removePendingGeneration(generationId);
     }
   }, [paymentRequired, selectedPromptForPayment, referenceImage, signAndSendTransaction, verifyPayment, resetPayment, addImage, modelTier]);
 
@@ -226,15 +299,7 @@ const HomePage = ({ onConnectWallet }: HomePageProps) => {
       const link = document.createElement('a');
       link.href = blobUrl;
 
-      let downloadName = `generated-${Date.now()}.png`;
-      if (originalFileName && selectedPrompt) {
-        const baseName = originalFileName.replace(/\.[^.]+$/, '');
-        const sanitizedPromptName = selectedPrompt.name
-          .replace(/\s+/g, '-')
-          .replace(/[^a-zA-Z0-9_-]/g, '');
-        downloadName = `${baseName}_${sanitizedPromptName}.png`;
-      }
-      link.download = downloadName;
+      link.download = selectedPrompt ? makeFileName(selectedPrompt.name) : `generated-${Date.now()}.png`;
 
       document.body.appendChild(link);
       link.click();

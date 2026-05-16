@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import BurgerButton from './BurgerButton';
 import { StatusBar } from './StatusBar';
 import './Header.css';
-import favicon from '/favicon.svg';
+import favicon from '/bw_icon.ico';
 
 interface HeaderProps {
   isMenuOpen?: boolean;

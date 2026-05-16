@@ -67,14 +67,14 @@ class MemoryR2 {
     };
   }
 
-  async put(key: string, value: ArrayBuffer): Promise<R2Object> {
+  async put(key: string, value: ArrayBuffer, options?: { httpMetadata?: R2HTTPMetadata; customMetadata?: Record<string, string> }): Promise<R2Object> {
     const obj: R2Object & { data: ArrayBuffer } = {
       key,
       version: '1',
       size: value.byteLength,
       uploaded: new Date(),
-      httpMetadata: {},
-      customMetadata: {},
+      httpMetadata: options?.httpMetadata || {},
+      customMetadata: options?.customMetadata || {},
       data: value,
     };
     this.store.set(key, obj);
@@ -142,13 +142,13 @@ const env = {
   PROMPTS_KV: new MemoryKV(),
   TXHASH_REGISTRY_KV: new MemoryKV(),
   IMAGES_R2: new MemoryR2(),
+  GENERATED_IMAGES_R2: new MemoryR2(),
   OPENROUTER_API_KEY: process.env.OPENROUTER_API_KEY || 'test-key',
   GENERATION_MODEL: process.env.GENERATION_MODEL || 'sourceful/riverflow-v2-fast-preview',
   GENERATION_LOW_MODEL: process.env.GENERATION_LOW_MODEL || process.env.GENERATION_MODEL || 'sourceful/riverflow-v2-fast-preview',
   GENERATION_HIGH_MODEL: process.env.GENERATION_HIGH_MODEL || process.env.GENERATION_MODEL || 'google/gemini-3.1-flash-image-preview',
-  X402_PRICE_USD: process.env.X402_PRICE_USD || '0.001',
-  X402_LOW_PRICE_USD: process.env.X402_LOW_PRICE_USD || process.env.X402_PRICE_USD || '0.01',
-  X402_HIGH_PRICE_USD: process.env.X402_HIGH_PRICE_USD || process.env.X402_PRICE_USD || '0.05',
+  X402_LOW_PRICE_USD: process.env.X402_LOW_PRICE_USD || '0.01',
+  X402_HIGH_PRICE_USD: process.env.X402_HIGH_PRICE_USD || '0.05',
   X402_PAY_TO_ADDRESS: process.env.X402_PAY_TO_ADDRESS || '0x7B3193eEb2d754d126b70A1F184659D52740D306',
   LOCAL_DEV_BYPASS_PAYMENT: process.env.LOCAL_DEV_BYPASS_PAYMENT || 'true',
   BASE_RPC_URL: process.env.BASE_RPC_URL || 'https://mainnet.base.org',
@@ -159,9 +159,13 @@ const env = {
 await seedPrompts(env.PROMPTS_KV as MemoryKV);
 
 // Start server
+const executionCtx = {
+  waitUntil: (p: Promise<unknown>) => { p.catch(console.error); },
+};
+
 const server = serve({
   port: 8787,
-  fetch: (req) => app.fetch(req, env as any),
+  fetch: (req) => app.fetch(req, env as any, executionCtx as any),
 });
 
 console.log(`🚀 Local dev server running at http://localhost:${server.port}`);
