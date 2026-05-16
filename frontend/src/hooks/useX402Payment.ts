@@ -1,18 +1,26 @@
-import { useState, useCallback, useEffect, useRef } from 'react';
-import { type Address, encodeFunctionData, parseAbi, type Hash } from 'viem';
+import { useState, useCallback, useEffect } from 'react';
+import { type Address, encodeFunctionData, parseAbi, type Hash, publicActions } from 'viem';
 import { base } from 'viem/chains';
 import { x402Client, x402HTTPClient } from '@x402/fetch';
 import { ExactEvmScheme } from '@x402/evm/exact/client';
 import { toClientEvmSigner } from '@x402/evm';
 import { encodePaymentSignatureHeader } from '@x402/core/http';
+import {
+  connect,
+  disconnect,
+  reconnect,
+  getAccount,
+  watchAccount,
+  getWalletClient,
+  switchChain,
+} from '@wagmi/core';
+import { config } from '../wagmi';
 
-// USDC ABI for transfer function
 const USDC_ABI = parseAbi([
   'function transfer(address to, uint256 amount) returns (bool)',
   'function decimals() view returns (uint8)',
 ]);
 
-// USDC contract address on Base
 const USDC_CONTRACT = '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913';
 
 export interface PaymentRequiredResponse {
@@ -21,7 +29,7 @@ export interface PaymentRequiredResponse {
     scheme: string;
     network: string;
     price: string;
-    amount?: string; // Raw amount in smallest units (e.g., USDC wei)
+    amount?: string;
     payTo: Address;
     maxTimeoutSeconds: number;
     resource: string;
@@ -45,109 +53,75 @@ export interface PaymentState {
   isVerifying: boolean;
   error: string | null;
   paymentRequired: PaymentRequiredResponse | null;
-  rawPaymentRequired: any | null; // Store raw decoded PAYMENT-REQUIRED header
+  rawPaymentRequired: any | null;
   walletAddress: Address | null;
   chainId: number | null;
   txHash: string | null;
-  connectionType: 'injected' | 'walletconnect' | null; // Track connection type
+  connectionType: 'injected' | 'walletconnect' | null;
+}
+
+function connectorIdToType(id: string | undefined): 'injected' | 'walletconnect' | null {
+  if (id === 'injected') return 'injected';
+  if (id === 'walletConnect') return 'walletconnect';
+  return null;
+}
+
+async function ensureBaseChain(): Promise<void> {
+  const current = getAccount(config);
+  if (current.chainId !== base.id) {
+    try {
+      await switchChain(config, { chainId: base.id });
+    } catch {
+      throw new Error('Please switch to Base Mainnet network');
+    }
+  }
+}
+
+async function getExtendedWalletClient(address: Address) {
+  const client = await getWalletClient(config, { account: address, chainId: base.id });
+  return client.extend(publicActions);
 }
 
 export function useX402Payment() {
-  const [state, setState] = useState<PaymentState>({
-    isPaying: false,
-    isPaid: false,
-    isConnecting: false,
-    isConnected: false,
-    isVerifying: false,
-    error: null,
-    paymentRequired: null,
-    rawPaymentRequired: null, // Store raw decoded PAYMENT-REQUIRED header
-    walletAddress: null,
-    chainId: null,
-    txHash: null,
-    connectionType: null, // Track connection type
+  const [state, setState] = useState<PaymentState>(() => {
+    const account = getAccount(config);
+    return {
+      isPaying: false,
+      isPaid: false,
+      isConnecting: false,
+      isConnected: account.isConnected,
+      isVerifying: false,
+      error: null,
+      paymentRequired: null,
+      rawPaymentRequired: null,
+      walletAddress: (account.address as Address) || null,
+      chainId: account.chainId ?? null,
+      txHash: null,
+      connectionType: connectorIdToType(account.connector?.id),
+    };
   });
 
-  // Ref to track if recovery has been attempted (prevents infinite loops)
-  const recoveryAttempted = useRef(false);
-
-  // Reset recovery attempt flag (for reconnection after disconnect)
-  // This is handled internally by disconnectWallet
-
-  // Attempt to recover connection on mount
   useEffect(() => {
-    // Skip if already attempted recovery
-    if (recoveryAttempted.current) {
-      return;
-    }
-    recoveryAttempted.current = true;
+    reconnect(config);
 
-    const recoverConnection = async () => {
-      try {
-        // 1. Try Injected Wallet first
-        const ethereum = (window as any).ethereum;
-        if (ethereum) {
-          // Use eth_accounts to check for existing authorization without a popup
-          let accounts = await ethereum.request({ method: 'eth_accounts' }).catch(() => []);
-          
-          if (accounts && accounts.length > 0) {
-            const chainId = await ethereum.request({ method: 'eth_chainId' }).catch(() => '0x2105');
-            setState(prev => ({
-              ...prev,
-              isConnected: true,
-              walletAddress: accounts[0],
-              chainId: typeof chainId === 'string' ? parseInt(chainId, 16) : chainId,
-              connectionType: 'injected',
-            }));
-            return;
-          }
-        }
+    const unwatch = watchAccount(config, {
+      onChange(data) {
+        setState(prev => ({
+          ...prev,
+          isConnected: data.isConnected,
+          walletAddress: (data.address as Address) || null,
+          chainId: data.chainId ?? null,
+          error: null,
+          connectionType: connectorIdToType(data.connector?.id),
+        }));
+      },
+    });
 
-        // 2. Try WalletConnect
-        const { getWalletConnectProvider, connectWalletConnect } = await import('../utils/walletConnect');
-        const provider = getWalletConnectProvider();
-        
-        if (provider && provider.accounts && provider.accounts.length > 0) {
-          // WalletConnect already has a session, use it
-          setState(prev => ({
-            ...prev,
-            isConnected: true,
-            walletAddress: provider.accounts[0] as Address,
-            chainId: provider.chainId,
-            connectionType: 'walletconnect',
-          }));
-          return;
-        }
-
-        // No provider found, try to initialize silently
-        try {
-          // We now initialize with showQrModal: true to avoid core re-initialization issues,
-          // and use skipConnect: true so the modal doesn't pop up on page refresh.
-          const result = await connectWalletConnect({ showQrModal: true, skipConnect: true });
-          
-          if (result.provider && result.provider.accounts && result.provider.accounts.length > 0) {
-            setState(prev => ({
-              ...prev,
-              isConnected: true,
-              walletAddress: result.provider.accounts[0] as Address,
-              chainId: result.provider.chainId,
-              connectionType: 'walletconnect',
-            }));
-          }
-        } catch (e) {
-          // Silently fail if no session to restore
-          console.debug('WalletConnect session restore failed:', e);
-        }
-      } catch (err) {
-        console.error('Failed to recover wallet connection:', err);
-      }
+    return () => {
+      unwatch();
     };
-
-    recoverConnection();
   }, []);
 
-
-  // Connect wallet using viem wallet connectors or WalletConnect
   const connectWallet = useCallback(async (connectionType?: 'injected' | 'walletconnect') => {
     setState(prev => ({ ...prev, isConnecting: true, error: null }));
 
@@ -156,102 +130,36 @@ export function useX402Payment() {
         throw new Error('Window object not available');
       }
 
-      const { createWalletClient, custom, publicActions } = await import('viem');
+      const connectorId = connectionType === 'walletconnect' ? 'walletConnect' : 'injected';
+      const connector = config.connectors.find(c => c.id === connectorId);
 
-      // Use WalletConnect if specified or if no injected wallet is available
-      const useWalletConnect = connectionType === 'walletconnect' ||
-        (connectionType === undefined && !(window as any).ethereum);
-
-      if (useWalletConnect) {
-        // Connect using WalletConnect
-        const { connectWalletConnect, getWalletConnectProvider } = await import('../utils/walletConnect');
-
-        const result = await connectWalletConnect();
-        const provider = getWalletConnectProvider();
-
-        if (!provider) {
-          throw new Error('WalletConnect provider not available');
-        }
-
-        // Create wallet client using WalletConnect provider as custom transport
-        const walletClient = createWalletClient({
-          chain: base,
-          transport: custom(provider as any),
-          account: result.address,
-        }).extend(publicActions);
-
-        setState(prev => ({
-          ...prev,
-          isConnecting: false,
-          isConnected: true,
-          walletAddress: result.address,
-          chainId: base.id,
-          connectionType: 'walletconnect',
-        }));
-
-        return { walletClient, address: result.address, provider };
-      } else {
-        // Connect using injected wallet
-        const ethereum = (window as any).ethereum;
-
-        if (!ethereum) {
-          throw new Error('No Ethereum wallet found. Please install MetaMask or use WalletConnect.');
-        }
-
-        const walletClient = createWalletClient({
-          chain: base,
-          transport: custom(ethereum),
-        }).extend(publicActions);
-
-        const [address] = await walletClient.requestAddresses();
-
-        if (!address) {
-          throw new Error('No account selected');
-        }
-
-        const chainId = await walletClient.getChainId();
-
-        if (chainId !== base.id) {
-          try {
-            await ethereum.request({
-              method: 'wallet_switchEthereumChain',
-              params: [{ chainId: `0x${base.id.toString(16)}` }],
-            });
-          } catch (switchError: any) {
-            if (switchError.code === 4902) {
-              await ethereum.request({
-                method: 'wallet_addEthereumChain',
-                params: [
-                  {
-                    chainId: `0x${base.id.toString(16)}`,
-                    chainName: 'Base Mainnet',
-                    nativeCurrency: {
-                      name: 'Ethereum',
-                      symbol: 'ETH',
-                      decimals: 18,
-                    },
-                    rpcUrls: ['https://mainnet.base.org'],
-                    blockExplorerUrls: ['https://basescan.org'],
-                  },
-                ],
-              });
-            } else {
-              throw new Error('Please switch to Base Mainnet network');
-            }
-          }
-        }
-
-        setState(prev => ({
-          ...prev,
-          isConnecting: false,
-          isConnected: true,
-          walletAddress: address,
-          chainId: base.id,
-          connectionType: 'injected',
-        }));
-
-        return { walletClient, address };
+      if (!connector) {
+        throw new Error(`Wallet connector "${connectionType}" not available`);
       }
+
+      const result = await connect(config, { connector });
+
+      if (!result.accounts?.[0]) {
+        throw new Error('No account selected');
+      }
+
+      if (result.chainId !== base.id) {
+        try {
+          await switchChain(config, { chainId: base.id });
+        } catch {
+          throw new Error('Please switch to Base Mainnet network');
+        }
+      }
+
+      const walletClient = await getExtendedWalletClient(result.accounts[0] as Address);
+
+      setState(prev => ({
+        ...prev,
+        isConnecting: false,
+      }));
+
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      return { walletClient: walletClient as any, address: result.accounts[0] as Address };
     } catch (error) {
       setState(prev => ({
         ...prev,
@@ -262,10 +170,9 @@ export function useX402Payment() {
     }
   }, []);
 
-  // Create USDC transfer transaction data
   const createUSDCTransaction = useCallback((paymentDetails: {
     payTo: Address;
-    amount: string; // Raw amount in USDC smallest units (6 decimals)
+    amount: string;
   }) => {
     if (!state.walletAddress) {
       throw new Error('Wallet not connected');
@@ -285,7 +192,6 @@ export function useX402Payment() {
     };
   }, [state.walletAddress]);
 
-  // Sign and send USDC transfer transaction
   const signAndSendTransaction = useCallback(async (
     paymentDetails: {
       payTo: Address;
@@ -304,36 +210,10 @@ export function useX402Payment() {
         address = state.walletAddress;
       }
 
-      // Get the appropriate provider based on connection type
-      let provider: any;
-      if (state.connectionType === 'walletconnect') {
-        const { getWalletConnectProvider } = await import('../utils/walletConnect');
-        provider = getWalletConnectProvider();
-        if (!provider) {
-          throw new Error('WalletConnect provider not available');
-        }
-      } else {
-        provider = (window as any).ethereum;
-        if (!provider) {
-          throw new Error('No Ethereum provider found');
-        }
-      }
+      await ensureBaseChain();
 
-      const { createWalletClient, custom, publicActions } = await import('viem');
+      const walletClient = await getExtendedWalletClient(address);
 
-      // For WalletConnect, ensure we're on Base chain before creating client
-      if (state.connectionType === 'walletconnect') {
-        const { ensureBaseChain } = await import('../utils/walletConnect');
-        await ensureBaseChain();
-      }
-
-      const walletClient = createWalletClient({
-        chain: base,
-        transport: custom(provider),
-        account: address,
-      }).extend(publicActions);
-
-      // Simulate the transaction first (optional but recommended)
       try {
         await walletClient.simulateContract({
           account: address,
@@ -341,19 +221,20 @@ export function useX402Payment() {
           abi: USDC_ABI,
           functionName: 'transfer',
           args: [paymentDetails.payTo, BigInt(paymentDetails.amount)],
-        });
-      } catch (simError: any) {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        } as any);
+      } catch {
         // Continue anyway - simulation can fail for various reasons
       }
 
-      // Write (sign and send) the transaction
       const hash = await walletClient.writeContract({
         account: address,
         address: USDC_CONTRACT as Address,
         abi: USDC_ABI,
         functionName: 'transfer',
         args: [paymentDetails.payTo, BigInt(paymentDetails.amount)],
-      });
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      } as any);
 
       setState(prev => ({
         ...prev,
@@ -363,7 +244,7 @@ export function useX402Payment() {
       }));
 
       return hash;
-    } catch (error: any) {
+    } catch (error) {
       setState(prev => ({
         ...prev,
         isPaying: false,
@@ -371,9 +252,8 @@ export function useX402Payment() {
       }));
       throw error;
     }
-  }, [state.isConnected, state.walletAddress, state.connectionType, connectWallet]);
+  }, [state.isConnected, state.walletAddress, connectWallet]);
 
-  // Verify payment with worker
   const verifyPayment = useCallback(async (
     txHash: string,
     promptId: string,
@@ -415,7 +295,6 @@ export function useX402Payment() {
     }
   }, []);
 
-  // Make payment using x402
   const makePayment = useCallback(async (
     paymentRequired: PaymentRequiredResponse,
     originalRequest: () => Promise<Response>
@@ -432,37 +311,10 @@ export function useX402Payment() {
         address = state.walletAddress;
       }
 
-      // Get the appropriate provider based on connection type
-      let provider: any;
-      if (state.connectionType === 'walletconnect') {
-        const { getWalletConnectProvider } = await import('../utils/walletConnect');
-        provider = getWalletConnectProvider();
-        if (!provider) {
-          throw new Error('WalletConnect provider not available');
-        }
-      } else {
-        provider = (window as any).ethereum;
-        if (!provider) {
-          throw new Error('No Ethereum provider found');
-        }
-      }
+      await ensureBaseChain();
 
-      // For WalletConnect, ensure we're on Base chain before creating client
-      if (state.connectionType === 'walletconnect') {
-        const { ensureBaseChain } = await import('../utils/walletConnect');
-        await ensureBaseChain();
-      }
+      const walletClient = await getExtendedWalletClient(address);
 
-      // Create viem wallet client for signing with public actions
-      const { createWalletClient, custom, publicActions } = await import('viem');
-
-      const walletClient = createWalletClient({
-        chain: base,
-        transport: custom(provider),
-        account: address,
-      }).extend(publicActions);
-
-      // Create signer from viem wallet client - the walletClient now has account set
       const signer = toClientEvmSigner(
         {
           address,
@@ -477,18 +329,15 @@ export function useX402Payment() {
         }
       );
 
-      // Get the first scheme from payment required
       const scheme = paymentRequired.schemes[0];
       if (!scheme) {
         throw new Error('No payment scheme available');
       }
 
-      // Prepare the request body from the original request
       const response = await originalRequest();
       const bodyText = await response.clone().text();
       const url = response.url;
 
-      // Use the raw payment required from state if available, otherwise reconstruct
       const paymentRequiredInput = (state.rawPaymentRequired?.accepts?.length > 0) ? state.rawPaymentRequired : {
         x402Version: paymentRequired.x402Version || 2,
         error: 'Payment required',
@@ -512,20 +361,15 @@ export function useX402Payment() {
         },
       };
 
-      // Create x402 client and register EVM scheme
       const client = new x402Client()
         .register('eip155:*', new ExactEvmScheme(signer));
 
-      // Create HTTP client for payment operations
       const httpClient = new x402HTTPClient(client);
 
-      // Create payment payload from the payment required object
       const paymentPayload = await httpClient.createPaymentPayload(paymentRequiredInput);
 
-      // Encode payment signature header using the imported function
       const paymentHeader = encodePaymentSignatureHeader(paymentPayload);
 
-      // Retry the original request with payment header
       const paymentResponse = await fetch(url, {
         method: 'POST',
         headers: {
@@ -535,7 +379,6 @@ export function useX402Payment() {
         body: bodyText,
       });
 
-      // Check if payment was accepted
       if (paymentResponse.status === 402) {
         const errorBody = await paymentResponse.text();
         throw new Error(`Payment rejected: ${errorBody}`);
@@ -552,18 +395,16 @@ export function useX402Payment() {
       }));
       throw error;
     }
-  }, [state.isConnected, state.walletAddress, state.connectionType, state.rawPaymentRequired, connectWallet]);
+  }, [state.isConnected, state.walletAddress, state.rawPaymentRequired, connectWallet]);
 
-  // Format payment required response to our interface
   const formatPaymentRequired = (data: any): PaymentRequiredResponse => {
-    // Transform x402 accepts array to our schemes format
     const schemes = (data.accepts || []).map((accept: any) => {
       const payTo = accept.payTo || accept.extra?.payTo;
       return {
         scheme: accept.scheme,
         network: accept.network,
         price: accept.amount ? `$${(parseInt(accept.amount) / 1e6).toFixed(2)}` : '$0.10',
-        amount: accept.amount, // Keep raw amount for payment
+        amount: accept.amount,
         payTo,
         maxTimeoutSeconds: accept.maxTimeoutSeconds || 300,
         resource: data.resource?.url || '/',
@@ -580,32 +421,27 @@ export function useX402Payment() {
     };
   };
 
-  // Parse 402 response
   const parsePaymentRequired = useCallback(async (response: Response): Promise<PaymentRequiredResponse | null> => {
     if (response.status !== 402) return null;
 
     try {
-      // Clone response to avoid consuming the body stream
       const clonedResponse = response.clone();
       const data = await clonedResponse.json();
 
-      // Check for x402 headers (various formats)
       const paymentRequiredHeader = response.headers.get('x402-payment-required');
       const paymentRequiredHeaderUpper = response.headers.get('PAYMENT-REQUIRED');
       let parsed: PaymentRequiredResponse | null = null;
-      let decoded: any = null; // Store the decoded header for rawPaymentRequired
+      let decoded: any = null;
 
-      // Try PAYMENT-REQUIRED header first (base64 encoded)
       if (paymentRequiredHeaderUpper) {
         try {
           decoded = JSON.parse(atob(paymentRequiredHeaderUpper));
           parsed = formatPaymentRequired(decoded);
-        } catch (err) {
+        } catch {
           // Ignore decoding errors
         }
       }
 
-      // Try x402-payment-required header
       if (!parsed && paymentRequiredHeader) {
         try {
           decoded = JSON.parse(decodeURIComponent(paymentRequiredHeader));
@@ -615,29 +451,26 @@ export function useX402Payment() {
         }
       }
 
-      // Try to parse from body
       if (!parsed && (data?.schemes || data?.x402Version)) {
         decoded = data;
         parsed = formatPaymentRequired(data);
       }
 
-      // Set state if we successfully parsed payment required
       if (parsed) {
         setState(prev => ({
           ...prev,
           paymentRequired: parsed,
-          rawPaymentRequired: decoded, // Store the decoded header (not body data)
+          rawPaymentRequired: decoded,
         }));
         return parsed;
       }
 
       return null;
-    } catch (err) {
+    } catch {
       return null;
     }
   }, []);
 
-  // Reset payment state
   const resetPayment = useCallback(() => {
     setState(prev => ({
       ...prev,
@@ -651,8 +484,9 @@ export function useX402Payment() {
     }));
   }, []);
 
-  // Disconnect wallet
-  const disconnectWallet = useCallback(() => {
+  const disconnectWalletHook = useCallback(() => {
+    disconnect(config);
+
     setState(prev => ({
       ...prev,
       isConnected: false,
@@ -661,43 +495,7 @@ export function useX402Payment() {
       chainId: null,
       connectionType: null,
     }));
-
-    // Reset recovery attempt flag so user can reconnect
-    recoveryAttempted.current = false;
-
-    // Disconnect WalletConnect if it was used
-    if (state.connectionType === 'walletconnect') {
-      import('../utils/walletConnect').then(({ disconnectWalletConnect }) => {
-        disconnectWalletConnect();
-      });
-    }
-  }, [state.connectionType]);
-
-  // Listen for account changes in injected wallets
-  useEffect(() => {
-    const ethereum = (window as any).ethereum;
-    if (!ethereum || state.connectionType !== 'injected') {
-      return;
-    }
-
-    const handleAccountsChanged = (accounts: string[]) => {
-      if (accounts.length === 0) {
-        disconnectWallet();
-      } else {
-        console.log("Accounts:", accounts)
-        setState(prev => ({
-          ...prev,
-          walletAddress: accounts[0] as Address,
-        }));
-      }
-    };
-
-    ethereum.on('accountsChanged', handleAccountsChanged);
-
-    return () => {
-      ethereum.removeListener('accountsChanged', handleAccountsChanged);
-    };
-  }, [state.connectionType, disconnectWallet]);
+  }, []);
 
   return {
     ...state,
@@ -708,6 +506,6 @@ export function useX402Payment() {
     verifyPayment,
     parsePaymentRequired,
     resetPayment,
-    disconnectWallet,
+    disconnectWallet: disconnectWalletHook,
   };
 }

@@ -1,4 +1,4 @@
-import React, { createContext, useContext, type ReactNode } from 'react';
+import React, { createContext, useContext, type ReactNode, useMemo } from 'react';
 import { useX402Payment, type PaymentState } from '../hooks/useX402Payment';
 
 interface WalletContextType extends PaymentState {
@@ -10,6 +10,7 @@ interface WalletContextType extends PaymentState {
   parsePaymentRequired: (response: Response) => Promise<any>;
   resetPayment: () => void;
   disconnectWallet: () => void;
+  hasInjectedWallet: boolean;
 }
 
 const WalletContext = createContext<WalletContextType | undefined>(undefined);
@@ -17,10 +18,14 @@ const WalletContext = createContext<WalletContextType | undefined>(undefined);
 export const WalletProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const paymentHook = useX402Payment();
 
-  // We spread the paymentHook values into the context value
-  // Note: useX402Payment returns both the state and the functions
+  const hasInjectedWallet = useMemo(
+    () => typeof window !== 'undefined' && !!(window as any).ethereum,
+    []
+  );
+
   const value = {
     ...paymentHook,
+    hasInjectedWallet,
   } as WalletContextType;
 
   return (
