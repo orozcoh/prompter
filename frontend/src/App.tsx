@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { HelmetProvider } from 'react-helmet-async';
 import Header from './components/Header';
@@ -26,13 +26,8 @@ const NotFound = () => (
 const AppShell = () => {
   const [isSidePanelOpen, setIsSidePanelOpen] = useState(false);
   const [showWalletSelection, setShowWalletSelection] = useState(false);
-  const [hasInjectedWallet, setHasInjectedWallet] = useState(false);
 
-  const { isConnected, isConnecting, connectWallet } = useWallet();
-
-  useEffect(() => {
-    setHasInjectedWallet(!!(typeof window !== 'undefined' && (window as any).ethereum));
-  }, []);
+  const { isConnected, isConnecting, connectWallet, hasInjectedWallet } = useWallet();
 
   const handleSelectWallet = async (type: 'injected' | 'walletconnect') => {
     try {
