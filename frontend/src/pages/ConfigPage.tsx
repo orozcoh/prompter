@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useImages } from '../context/ImagesContext';
 import { getStorageSize } from '../utils/imageStorage';
+import { SEO } from '../components/SEO';
 import './ConfigPage.css';
 
 function formatBytes(bytes: number): string {
@@ -36,10 +37,15 @@ const ConfigPage = () => {
   };
 
   return (
-    <main className="">
+    <main className="app-main">
+      <SEO
+        title="Configuration"
+        description="Manage your Prompter settings. View storage usage and delete stored images."
+        path="/config"
+      />
       <div className="config-page">
         <div className="config-section">
-          <h3>Database</h3>
+          <h2>Database</h2>
           <p className="config-stat">
             Size: <strong>{dbSize ? formatBytes(dbSize.bytes) : 'Calculating...'}</strong>
           </p>

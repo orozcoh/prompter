@@ -1,5 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { HelmetProvider } from 'react-helmet-async';
 import Header from './components/Header';
 import Footer from './components/Footer';
 import SidePanel from './components/SidePanel';
@@ -13,16 +14,20 @@ import AboutPage from './pages/AboutPage';
 import { useRegisterSW } from 'virtual:pwa-register/react';
 import './App.css';
 
+const NotFound = () => (
+  <main className="app-main">
+    <div className="page-placeholder">
+      <h1>404 - Page Not Found</h1>
+      <p>The page you're looking for doesn't exist.</p>
+    </div>
+  </main>
+);
+
 const AppShell = () => {
   const [isSidePanelOpen, setIsSidePanelOpen] = useState(false);
   const [showWalletSelection, setShowWalletSelection] = useState(false);
-  const [hasInjectedWallet, setHasInjectedWallet] = useState(false);
 
-  const { isConnected, isConnecting, connectWallet } = useWallet();
-
-  useEffect(() => {
-    setHasInjectedWallet(!!(typeof window !== 'undefined' && (window as any).ethereum));
-  }, []);
+  const { isConnected, isConnecting, connectWallet, hasInjectedWallet } = useWallet();
 
   const handleSelectWallet = async (type: 'injected' | 'walletconnect') => {
     try {
@@ -51,6 +56,7 @@ const AppShell = () => {
           <Route path="/myImages" element={<MyImagesPage />} />
           <Route path="/config" element={<ConfigPage />} />
           <Route path="/about" element={<AboutPage />} />
+          <Route path="*" element={<NotFound />} />
         </Routes>
       </div>
       <Footer />
@@ -82,10 +88,11 @@ function App() {
   });
 
   return (
-    <WalletProvider>
-      <ImagesProvider>
-        <BrowserRouter>
-          <AppShell />
+    <HelmetProvider>
+      <WalletProvider>
+        <ImagesProvider>
+          <BrowserRouter>
+            <AppShell />
           {needRefresh && (
             <div className="pwa-update-banner">
               <span>New version available</span>
@@ -106,6 +113,7 @@ function App() {
         </BrowserRouter>
       </ImagesProvider>
     </WalletProvider>
+    </HelmetProvider>
   );
 }
 

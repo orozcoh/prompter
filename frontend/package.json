@@ -10,16 +10,17 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "@walletconnect/ethereum-provider": "^2.23.8",
-    "@walletconnect/modal": "^2.7.0",
+    "@wagmi/connectors": "^8.0.14",
+    "@wagmi/core": "^3.4.12",
     "@x402/evm": "^2.6.0",
     "@x402/fetch": "^2.6.0",
     "buffer": "^6.0.3",
     "lucide-react": "^1.14.0",
     "react": "^19.2.4",
     "react-dom": "^19.2.4",
+    "react-helmet-async": "^3.0.0",
     "react-router-dom": "^7.14.2",
-    "viem": "^2.47.4"
+    "viem": "^2.49.3"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.4",

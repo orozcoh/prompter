@@ -13,6 +13,19 @@ walletconnect-modal,
   flex-direction: column;
 }
 
+/* Screen reader only utility */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
 /* ===== MAIN LAYOUT ===== */
 .app-main {
   max-width: 1200px;
@@ -503,11 +516,25 @@ walletconnect-modal,
 /* ===== PAGE PLACEHOLDER ===== */
 .page-placeholder {
   max-width: 1200px;
-  margin: 20px;
+  margin: 20px auto;
   padding: var(--space-6);
   width: 100%;
   text-align: center;
+  grid-column: 1 / -1;
+}
 
+@media (max-width: 900px) {
+  .page-placeholder {
+    margin: var(--space-4) auto;
+    padding: var(--space-4);
+  }
+}
+
+@media (max-width: 480px) {
+  .page-placeholder {
+    margin: var(--space-3) auto 0;
+    padding: var(--space-3);
+  }
 }
 
 .page-placeholder h2 {

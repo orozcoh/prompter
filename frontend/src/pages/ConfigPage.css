@@ -2,6 +2,13 @@
   max-width: 600px;
   margin: 0 auto;
   padding: var(--space-12) var(--space-6);
+  grid-column: 1 / -1;
+}
+
+@media (max-width: 480px) {
+  .config-page {
+    padding: var(--space-6) var(--space-4);
+  }
 }
 
 .config-page h2 {

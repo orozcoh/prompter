@@ -46,7 +46,7 @@ export function ImageModal({ image, isOpen, onClose }: ImageModalProps) {
         </button>
 
         <div className="image-modal-body">
-          <img src={image.imageUrl} alt={image.promptName || 'Generated image'} className="image-modal-img" />
+          <img src={image.imageUrl} alt={image.promptName || 'Generated image'} className="image-modal-img" loading="lazy" />
         </div>
 
         <div className="image-modal-info">

@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Trash2 } from 'lucide-react';
 import { useImages } from '../context/ImagesContext';
 import { ImageModal } from '../components/ImageModal';
+import { SEO } from '../components/SEO';
 import type { StoredImage } from '../utils/imageStorage';
 
 const MyImagesPage = () => {
@@ -21,16 +22,24 @@ const MyImagesPage = () => {
 
   if (isLoading) {
     return (
-      <div className="page-placeholder">
-        <h2>My AI Images</h2>
-        <p className="loading-text">Loading...</p>
-      </div>
+      <main className="app-main">
+        <div className="page-placeholder">
+          <h1>My AI Images</h1>
+          <p className="loading-text">Loading...</p>
+        </div>
+      </main>
     );
   }
 
   return (
     <main className="app-main">
+      <SEO
+        title="My AI Images"
+        description="View your generated AI images. Browse, download, and manage your collection of AI-generated artwork."
+        path="/myImages"
+      />
       <div className="my-images-page">
+        <h1 className="sr-only">My AI Images</h1>
        {/*  <div className="my-images-header">
           <h2>My AI Images</h2>
         </div> */}
