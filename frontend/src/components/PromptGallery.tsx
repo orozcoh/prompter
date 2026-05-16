@@ -16,7 +16,7 @@ interface PromptGalleryProps {
 export function PromptGallery({ prompts, selectedPrompt, onSelectPrompt, generationDisabled }: PromptGalleryProps) {
   return (
     <div className="prompt-gallery">
-      <h3>Select a Prompt Style</h3>
+      <h2>Select a Prompt Style</h2>
 
       {prompts.length === 0 ? (
         <div className="empty-state">

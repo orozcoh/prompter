@@ -4,6 +4,7 @@ import { ImageUpload } from '../components/ImageUpload';
 import { PromptGallery } from '../components/PromptGallery';
 import { StatusIndicator, type GenerationStatus } from '../components/StatusIndicator';
 import { PaywallModal } from '../components/PaywallModal';
+import { SEO } from '../components/SEO';
 import { useWallet } from '../context/WalletContext';
 import { useImages } from '../context/ImagesContext';
 import { extractImageUrl } from '../utils/extractImageUrl';
@@ -253,6 +254,12 @@ const HomePage = ({ onConnectWallet }: HomePageProps) => {
 
   return (
     <main className="app-main">
+      <SEO
+        title="AI Image Generation"
+        description="Upload a reference image, choose a prompt style, and generate AI art. Pay per generation with USDC on Base via x402."
+        path="/"
+      />
+      <h1 className="sr-only">Prompter - AI Image Generation</h1>
       <div className="upload-section">
         <ImageUpload
           defaultPreviewUrl="/prompt-sample/prompter-ref-low.jpg"
@@ -278,8 +285,8 @@ const HomePage = ({ onConnectWallet }: HomePageProps) => {
 
       {result && (
         <div className="result-section">
-          <h3>Generated Image</h3>
-          <img src={result.imageUrl} alt="Generated result" />
+          <h2>Generated Image</h2>
+          <img src={result.imageUrl} alt="Generated result" loading="lazy" />
           <div className="result-actions">
             <button className="button primary" onClick={() => downloadImage(result.imageUrl)}>
               <Download size={16} />
