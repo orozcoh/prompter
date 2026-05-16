@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { Download } from 'lucide-react';
 import { ImageUpload } from '../components/ImageUpload';
 import { PromptGallery } from '../components/PromptGallery';
+import { ModelSelector } from '../components/ModelSelector';
 import { StatusIndicator, type GenerationStatus } from '../components/StatusIndicator';
 import { PaywallModal } from '../components/PaywallModal';
 import { SEO } from '../components/SEO';
@@ -36,6 +37,7 @@ const HomePage = ({ onConnectWallet }: HomePageProps) => {
   const [generationStatus, setGenerationStatus] = useState<GenerationStatus>('idle');
   const [result, setResult] = useState<GeneratedResult | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [modelTier, setModelTier] = useState<string>('low');
 
   const {
     isPaying,
@@ -82,6 +84,7 @@ const HomePage = ({ onConnectWallet }: HomePageProps) => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           promptId: prompt.id,
+          modelTier,
         }),
       });
 
@@ -136,7 +139,7 @@ const HomePage = ({ onConnectWallet }: HomePageProps) => {
       setError(err instanceof Error ? err.message : 'Generation failed');
       setGenerationStatus('error');
     }
-  }, [referenceImage, parsePaymentRequired, addImage]);
+  }, [referenceImage, parsePaymentRequired, addImage, modelTier]);
 
   const handleGenerateWithPayment = useCallback(async () => {
     if (!paymentRequired || !selectedPromptForPayment) return;
@@ -155,7 +158,8 @@ const HomePage = ({ onConnectWallet }: HomePageProps) => {
       const response = await verifyPayment(
         hash,
         selectedPromptForPayment.id,
-        referenceImage
+        referenceImage,
+        modelTier
       );
 
       const data = await response.json();
@@ -202,7 +206,7 @@ const HomePage = ({ onConnectWallet }: HomePageProps) => {
       setError(err instanceof Error ? err.message : 'Payment/Generation failed');
       setGenerationStatus('error');
     }
-  }, [paymentRequired, selectedPromptForPayment, referenceImage, signAndSendTransaction, verifyPayment, resetPayment, addImage]);
+  }, [paymentRequired, selectedPromptForPayment, referenceImage, signAndSendTransaction, verifyPayment, resetPayment, addImage, modelTier]);
 
   const handleClosePaywall = useCallback(() => {
     resetPayment();
@@ -268,6 +272,7 @@ const HomePage = ({ onConnectWallet }: HomePageProps) => {
             if (name) setOriginalFileName(name);
           }}
         />
+        <ModelSelector selectedTier={modelTier} onSelectTier={setModelTier} />
       </div>
 
       <div className="gallery-section">

@@ -30,6 +30,8 @@ bucket_name = "prompter-images"
 workers_dev = false
 
 X402_PRICE_USD="0.05"
+X402_LOW_PRICE_USD="0.01"
+X402_HIGH_PRICE_USD="0.05"
 X402_PAY_TO_ADDRESS="0x7B3193eEb2d754d126b70A1F184659D52740D306"
 
 # On-chain verification config

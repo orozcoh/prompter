@@ -9,12 +9,29 @@ export type Env = {
   TXHASH_REGISTRY_KV: KVNamespace;
   OPENROUTER_API_KEY: string;
   GENERATION_MODEL?: string;
+  GENERATION_LOW_MODEL?: string;
+  GENERATION_HIGH_MODEL?: string;
   X402_PRICE_USD: string;
+  X402_LOW_PRICE_USD?: string;
+  X402_HIGH_PRICE_USD?: string;
   X402_PAY_TO_ADDRESS: string;
   LOCAL_DEV_BYPASS_PAYMENT?: string;
   BASE_RPC_URL?: string;
   MIN_CONFIRMATIONS?: string;
 };
+
+function getModelAndPrice(env: Env, tier?: string) {
+  if (tier === 'high') {
+    return {
+      model: env.GENERATION_HIGH_MODEL || env.GENERATION_MODEL || 'sourceful/riverflow-v2-fast-preview',
+      price: env.X402_HIGH_PRICE_USD || env.X402_PRICE_USD,
+    };
+  }
+  return {
+    model: env.GENERATION_LOW_MODEL || env.GENERATION_MODEL || 'sourceful/riverflow-v2-fast-preview',
+    price: env.X402_LOW_PRICE_USD || env.X402_PRICE_USD,
+  };
+}
 
 interface PromptData {
   name: string;
@@ -27,6 +44,7 @@ interface VerifyPaymentRequest {
   txHash: string;
   promptId: string;
   referenceImage?: string;
+  modelTier?: string;
 }
 
 const app = new Hono<{ Bindings: Env }>();
@@ -83,6 +101,8 @@ function createPaymentRequiredData(priceUsd: string, payTo: string, resourceUrl:
 // Helper function to generate image using OpenRouter
 async function generateImage(
   c: any,
+  model: string,
+  price: string,
   promptId: string,
   referenceImage?: string,
   paymentInfo?: { amount: string; confirmations: number; from: string; txHash: string }
@@ -102,7 +122,7 @@ async function generateImage(
       'Authorization': `Bearer ${c.env.OPENROUTER_API_KEY}`,
     },
     body: JSON.stringify({
-      model: c.env.GENERATION_MODEL || 'sourceful/riverflow-v2-fast-preview',
+      model,
       messages: [
         {
           role: 'user',
@@ -136,8 +156,8 @@ async function generateImage(
   const response: any = {
     success: true,
     promptId,
-    cost: c.env.X402_PRICE_USD,
-    model: c.env.GENERATION_MODEL || 'sourceful/riverflow-v2-fast-preview',
+    cost: price,
+    model,
     apiResponse: cleanedResult,
   };
 
@@ -191,17 +211,37 @@ app.get('/prompts/:id', async (c) => {
   return c.json({ id, ...publicPrompt });
 });
 
+// Get available model tiers for the frontend selector
+app.get('/models', (c) => {
+  const low = getModelAndPrice(c.env, 'low');
+  const high = getModelAndPrice(c.env, 'high');
+
+  return c.json({
+    tiers: [
+      { id: 'low', label: 'Standard', model: low.model, price: low.price },
+      { id: 'high', label: 'Premium', model: high.model, price: high.price },
+    ],
+    defaultTier: 'low',
+  });
+});
+
 // Generate image - returns payment info if no txHash provided
 app.post('/generate', async (c) => {
   try {
     const body = await c.req.json();
-    const { promptId, referenceImage, txHash } = body;
+    const { promptId, referenceImage, txHash, modelTier } = body;
+
+    if (!promptId) {
+      return c.json({ error: 'Prompt ID required' }, 400);
+    }
+
+    const { model, price } = getModelAndPrice(c.env, modelTier);
 
     // If txHash is provided, this is a payment verification request - reject with proper error
     if (txHash) {
       return c.json({
         error: 'Use /verify-payment endpoint for payment verification',
-        hint: 'Send POST to /verify-payment with { txHash, promptId, referenceImage }'
+        hint: 'Send POST to /verify-payment with { txHash, promptId, referenceImage, modelTier }'
       }, 400);
     }
 
@@ -210,12 +250,12 @@ app.post('/generate', async (c) => {
 
     if (bypassPayment) {
       // Skip payment - generate directly
-      return await generateImage(c, promptId, referenceImage);
+      return await generateImage(c, model, price, promptId, referenceImage);
     }
 
     // If no txHash, return payment required (402) with payment details
     const paymentData = createPaymentRequiredData(
-      c.env.X402_PRICE_USD,
+      price,
       c.env.X402_PAY_TO_ADDRESS,
       '/generate'
     );
@@ -246,7 +286,7 @@ app.post('/generate', async (c) => {
 app.post('/verify-payment', async (c) => {
   try {
     const body = await c.req.json() as VerifyPaymentRequest;
-    const { txHash, promptId, referenceImage } = body;
+    const { txHash, promptId, referenceImage, modelTier } = body;
 
     // Log incoming transaction
     console.log(`tx: ${txHash}`);
@@ -265,6 +305,8 @@ app.post('/verify-payment', async (c) => {
       return c.json({ error: 'Prompt not found' }, 404);
     }
 
+    const { model, price } = getModelAndPrice(c.env, modelTier);
+
     // Check for replay attack - verify txHash hasn't been used before
     const alreadyProcessed = await c.env.TXHASH_REGISTRY_KV.get(txHash);
     if (alreadyProcessed) {
@@ -278,7 +320,7 @@ app.post('/verify-payment', async (c) => {
     const verificationParams: PaymentVerificationParams = {
       txHash,
       expectedPayTo: c.env.X402_PAY_TO_ADDRESS,
-      expectedAmountUsd: c.env.X402_PRICE_USD,
+      expectedAmountUsd: price,
       minConfirmations: c.env.MIN_CONFIRMATIONS ? parseInt(c.env.MIN_CONFIRMATIONS) : 3,
     };
 
@@ -310,7 +352,7 @@ app.post('/verify-payment', async (c) => {
 
     // Generate image using helper function with payment info
     console.log('     -> generating image...');
-    const result = await generateImage(c, promptId, referenceImage, {
+    const result = await generateImage(c, model, price, promptId, referenceImage, {
       txHash,
       amount: verification.amount || '0',
       confirmations: verification.confirmations || 0,
