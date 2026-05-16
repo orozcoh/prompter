@@ -15,7 +15,7 @@ interface Prompt {
   id: string;
   name: string;
   prompt: string;
-  imageUrl: string;
+  imageUrls: { low: string; high: string };
 }
 
 interface GeneratedResult {
@@ -38,6 +38,9 @@ const HomePage = ({ onConnectWallet }: HomePageProps) => {
   const [result, setResult] = useState<GeneratedResult | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [modelTier, setModelTier] = useState<string>('low');
+
+  const referencePrompt = prompts.find(p => p.id === 'prompt-ref');
+  const defaultPreviewUrl = referencePrompt?.imageUrls?.[modelTier as 'low' | 'high'];
 
   const {
     isPaying,
@@ -266,7 +269,7 @@ const HomePage = ({ onConnectWallet }: HomePageProps) => {
       <h1 className="sr-only">Prompter - AI Image Generation</h1>
       <div className="upload-section">
         <ImageUpload
-          defaultPreviewUrl="/prompt-sample/prompter-ref-low.jpg"
+          defaultPreviewUrl={defaultPreviewUrl}
           onImageSelect={(data, name) => {
             setReferenceImage(data);
             if (name) setOriginalFileName(name);
@@ -281,6 +284,7 @@ const HomePage = ({ onConnectWallet }: HomePageProps) => {
           selectedPrompt={selectedPrompt}
           onSelectPrompt={handleSelectPrompt}
           generationDisabled={!referenceImage}
+          modelTier={modelTier}
         />
       </div>
 

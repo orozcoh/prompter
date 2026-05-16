@@ -2,7 +2,7 @@ interface Prompt {
   id: string;
   name: string;
   prompt: string;
-  imageUrl: string;
+  imageUrls: { low: string; high: string };
   category?: string;
 }
 
@@ -11,9 +11,10 @@ interface PromptGalleryProps {
   selectedPrompt: Prompt | null;
   onSelectPrompt: (prompt: Prompt) => void;
   generationDisabled?: boolean;
+  modelTier?: string;
 }
 
-export function PromptGallery({ prompts, selectedPrompt, onSelectPrompt, generationDisabled }: PromptGalleryProps) {
+export function PromptGallery({ prompts, selectedPrompt, onSelectPrompt, generationDisabled, modelTier = 'low' }: PromptGalleryProps) {
   return (
     <div className="prompt-gallery">
       <h2>Select a Prompt Style</h2>
@@ -30,7 +31,7 @@ export function PromptGallery({ prompts, selectedPrompt, onSelectPrompt, generat
               className={`gallery-item ${selectedPrompt?.id === prompt.id ? 'selected' : ''}`}
             >
               <div className="gallery-image">
-                <img src={prompt.imageUrl} alt={prompt.name} loading="lazy" />
+                <img src={prompt.imageUrls[modelTier as 'low' | 'high']} alt={prompt.name} loading="lazy" />
               </div>
               <div className="gallery-info">
                 <h4>{prompt.name}</h4>

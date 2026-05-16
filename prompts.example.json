@@ -4,6 +4,6 @@
     "name": "Example Style",
     "category": "portrait",
     "prompt": "Your detailed AI prompt goes here. Be specific about style, lighting, and composition.",
-    "imageUrl": "https://picsum.photos/seed/example/400/400"
+    "imageUrls": { "low": "https://example.com", "high": "" }
   }
 ]

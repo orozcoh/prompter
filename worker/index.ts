@@ -37,7 +37,7 @@ interface PromptData {
   name: string;
   prompt: string;
   category?: string;
-  imageUrl: string;
+  imageUrls: { low: string; high: string };
 }
 
 interface VerifyPaymentRequest {
