@@ -516,11 +516,25 @@ walletconnect-modal,
 /* ===== PAGE PLACEHOLDER ===== */
 .page-placeholder {
   max-width: 1200px;
-  margin: 20px;
+  margin: 20px auto;
   padding: var(--space-6);
   width: 100%;
   text-align: center;
+  grid-column: 1 / -1;
+}
 
+@media (max-width: 900px) {
+  .page-placeholder {
+    margin: var(--space-4) auto;
+    padding: var(--space-4);
+  }
+}
+
+@media (max-width: 480px) {
+  .page-placeholder {
+    margin: var(--space-3) auto 0;
+    padding: var(--space-3);
+  }
 }
 
 .page-placeholder h2 {
