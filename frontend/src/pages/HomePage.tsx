@@ -345,7 +345,7 @@ const HomePage = ({ onConnectWallet }: HomePageProps) => {
 
       <div className="gallery-section">
         <PromptGallery
-          prompts={prompts}
+          prompts={prompts.filter(p => p.id !== 'prompt-ref')}
           selectedPrompt={selectedPrompt}
           onSelectPrompt={handleSelectPrompt}
           generationDisabled={!referenceImage}

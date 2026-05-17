@@ -4,7 +4,7 @@ import { join, extname } from 'node:path';
 
 // ═══ Configuration ═══
 const BUCKET = "prompter-images"; // The R2 bucket name to upload to. Make sure your Wrangler config has the correct bucket and permissions set up.
-const DIR = "./generated/low-any"; // local directory containing images to upload
+const DIR = "./generated/high-any"; // local directory containing images to upload
 const PREFIX = ""; // optional R2 key prefix, e.g. "low/"
 // ════════════════════
 

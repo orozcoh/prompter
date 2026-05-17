@@ -18,7 +18,7 @@ async function populateKV() {
         name: prompt.name,
         prompt: prompt.prompt,
         category: prompt.category,
-        imageUrl: prompt.imageUrl,
+        imageUrls: prompt.imageUrls,
       });
 
       // Use wrangler kv key put to upload to production

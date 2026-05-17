@@ -21,7 +21,7 @@ export const config = createConfig({
         name: 'Prompter',
         description: 'AI Image Generation Platform',
         url: typeof window !== 'undefined' ? window.location.origin : '',
-        icons: ['/favicon.ico'],
+        icons: [typeof window !== 'undefined' ? `${window.location.origin}/favicon.ico` : ''],
       },
     }),
   ],

@@ -5,11 +5,12 @@
 //   bun run scripts/full-prompter-generator.ts
 
 // ═══ Configuration ═══
+const SINGLE_PROMPT_ID = ""; // set to e.g. "any-012" to generate just one; leave empty for all
 const MODEL = "sourceful/riverflow-v2-fast";
 //const MODEL = "google/gemini-3.1-flash-image-preview";
 const REFERENCE_IMAGE_PATH = "generated/reference/prompt-ref.jpeg";
-const OUTPUT_FOLDER = "generated/low-any";
-const PREFIX_NAME = "low_";
+const OUTPUT_FOLDER = "generated/high-any";
+const PREFIX_NAME = "high_";
 const PROMPTS_FILE_PATH = "./prompts.json";
 const DELAY_MS = 2000; // delay between requests to avoid rate limits
 // ════════════════════
@@ -201,6 +202,14 @@ async function main() {
     process.exit(1);
   }
 
+  if (SINGLE_PROMPT_ID) {
+    prompts = prompts.filter(p => p["prompt-id"] === SINGLE_PROMPT_ID);
+    if (prompts.length === 0) {
+      console.error(`❌ No prompt found with prompt-id "${SINGLE_PROMPT_ID}"`);
+      process.exit(1);
+    }
+    console.log(`🎯 Single-prompt mode: ${prompts[0].name} (${SINGLE_PROMPT_ID})`);
+  }
   console.log(`📋 Loaded ${prompts.length} prompts from ${PROMPTS_FILE_PATH}`);
 
   // Load reference image
