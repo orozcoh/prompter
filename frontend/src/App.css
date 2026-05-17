@@ -53,6 +53,12 @@ walletconnect-modal,
 }
 
 /* Terminal-style section headers */
+.upload-section {
+  /* position: sticky; */
+  top: var(--space-6);
+  align-self: start;
+}
+
 .upload-section::before {
   content: '[ UPLOAD ]';
   display: block;
@@ -111,11 +117,13 @@ walletconnect-modal,
   border-radius: var(--radius-lg);
   padding: var(--space-5);
   height: fit-content;
-  position: sticky;
-  top: var(--space-6);
 }
 
 @media (max-width: 900px) {
+  .upload-section {
+    position: static;
+  }
+
   .image-upload {
     position: static;
   }

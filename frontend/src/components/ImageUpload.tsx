@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef } from 'react';
+import { useState, useCallback, useRef, useEffect } from 'react';
 
 interface ImageUploadProps {
   onImageSelect: (imageData: string, fileName?: string) => void;
@@ -9,7 +9,14 @@ interface ImageUploadProps {
 export function ImageUpload({ onImageSelect, acceptedTypes = ['image/png', 'image/jpeg', 'image/webp'], defaultPreviewUrl }: ImageUploadProps) {
   const [preview, setPreview] = useState<string | null>(defaultPreviewUrl || null);
   const [isDragOver, setIsDragOver] = useState(false);
+  const [hasUserUpload, setHasUserUpload] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (!hasUserUpload && defaultPreviewUrl !== undefined) {
+      setPreview(defaultPreviewUrl);
+    }
+  }, [defaultPreviewUrl, hasUserUpload]);
 
   // Track whether the current preview is the default sample image or a user upload
   const isDefaultPreview = !!(defaultPreviewUrl && preview === defaultPreviewUrl);
@@ -24,6 +31,7 @@ export function ImageUpload({ onImageSelect, acceptedTypes = ['image/png', 'imag
     reader.onload = (e) => {
       const result = e.target?.result as string;
       setPreview(result);
+      setHasUserUpload(true);
       onImageSelect(result, file.name);
     };
     reader.readAsDataURL(file);
@@ -87,6 +95,7 @@ export function ImageUpload({ onImageSelect, acceptedTypes = ['image/png', 'imag
       {preview && (
         <button className="button secondary" onClick={() => {
           setPreview(null);
+          setHasUserUpload(false);
           onImageSelect('', '');
           if (fileInputRef.current) fileInputRef.current.value = '';
         }}>
