@@ -1,32 +1,21 @@
 import { execSync } from 'node:child_process';
 import { readdirSync, statSync } from 'node:fs';
-import { join, basename, extname } from 'node:path';
+import { join, extname } from 'node:path';
+
+// ═══ Configuration ═══
+const BUCKET = "prompter-images"; // The R2 bucket name to upload to. Make sure your Wrangler config has the correct bucket and permissions set up.
+const DIR = "./generated/low-any"; // local directory containing images to upload
+const PREFIX = ""; // optional R2 key prefix, e.g. "low/"
+// ════════════════════
 
 const IMAGE_EXTENSIONS = new Set(['.png', '.jpg', '.jpeg', '.webp', '.gif', '.svg']);
 
-function parseArgs() {
-  const args: Record<string, string> = {};
-  const raw = Bun.argv.slice(2);
-  for (let i = 0; i < raw.length; i++) {
-    if (raw[i].startsWith('--') && i + 1 < raw.length) {
-      args[raw[i]] = raw[i + 1];
-      i++;
-    }
-  }
-  return args;
-}
-
-const args = parseArgs();
-const dir = args['--dir'];
-const prefix = args['--prefix'] || '';
-
-if (!dir) {
-  console.error('Usage: bun run scripts/upload-reference-images.ts --dir <directory> [--prefix <key-prefix>]');
-  console.error('Example: bun run scripts/upload-reference-images.ts --dir ./catalog-images --prefix low/');
+if (!DIR) {
+  console.error('❌ DIR is empty. Set it in the Configuration block at the top of the script.');
   process.exit(1);
 }
 
-const absoluteDir = join(process.cwd(), dir);
+const absoluteDir = join(process.cwd(), DIR);
 
 let files: string[];
 try {
@@ -53,11 +42,11 @@ let failed = 0;
 
 for (const file of imageFiles) {
   const filePath = join(absoluteDir, file);
-  const r2Key = prefix ? `${prefix}${file}` : file;
+  const r2Key = PREFIX ? `${PREFIX}${file}` : file;
 
   try {
     execSync(
-      `wrangler r2 object put "prompter-images/${r2Key}" --file="${filePath}"`,
+      `wrangler r2 object put "${BUCKET}/${r2Key}" --file="${filePath}" --remote`,
       { stdio: 'inherit' },
     );
     console.log(`✅ Uploaded: ${r2Key}`);
@@ -70,6 +59,6 @@ for (const file of imageFiles) {
 
 console.log(`\n${'─'.repeat(40)}`);
 console.log(`Uploaded: ${success} | Failed: ${failed}`);
-if (prefix) {
-  console.log(`R2 URL pattern: https://<your-r2-public-url>/${prefix}<filename>`);
+if (PREFIX) {
+  console.log(`R2 URL pattern: https://<your-r2-public-url>/${PREFIX}<filename>`);
 }

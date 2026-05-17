@@ -5,12 +5,12 @@
 //   bun run scripts/full-prompter-generator.ts
 
 // ═══ Configuration ═══
-//const MODEL = "sourceful/riverflow-v2-fast";
-const MODEL = "google/gemini-3.1-flash-image-preview";
-const REFERENCE_IMAGE_PATH = "./frontend/public/prompt-sample/prompt-ref-low.jpg";
-const OUTPUT_FOLDER = "high-any";
-const PREFIX_NAME = "high_";
-const PROMPTS_FILE_PATH = "./prompts_sample.json";
+const MODEL = "sourceful/riverflow-v2-fast";
+//const MODEL = "google/gemini-3.1-flash-image-preview";
+const REFERENCE_IMAGE_PATH = "generated/reference/prompt-ref.jpeg";
+const OUTPUT_FOLDER = "generated/low-any";
+const PREFIX_NAME = "low_";
+const PROMPTS_FILE_PATH = "./prompts.json";
 const DELAY_MS = 2000; // delay between requests to avoid rate limits
 // ════════════════════
 

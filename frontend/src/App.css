@@ -54,7 +54,7 @@ walletconnect-modal,
 
 /* Terminal-style section headers */
 .upload-section {
-  position: sticky;
+  /* position: sticky; */
   top: var(--space-6);
   align-self: start;
 }
