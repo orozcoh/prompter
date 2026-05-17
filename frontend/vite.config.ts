@@ -28,21 +28,28 @@ export default defineConfig(({ mode }) => ({
         display: 'standalone',
         icons: [
           {
-            src: '/favicon.ico',
+            src: '/web-app-manifest-192x192.png',
             sizes: '192x192',
             type: 'image/png',
           },
           {
-            src: '/favicon.ico',
+            src: '/web-app-manifest-512x512.png',
             sizes: '512x512',
             type: 'image/png',
-            purpose: 'any maskable',
+          },
+          {
+            src: '/web-app-manifest-512x512.png',
+            sizes: '512x512',
+            type: 'image/png',
+            purpose: 'maskable',
           },
         ],
       },
       workbox: {
         maximumFileSizeToCacheInBytes: 3_000_000,
         globPatterns: ['**/*.{js,css,html,svg,png,jpg,woff2}'],
+        navigateFallback: '/index.html',
+        navigateFallbackDenylist: [/^\/api\//, /^\/_/],
         runtimeCaching: [
           {
             urlPattern: ({ url }: { url: URL }) => url.pathname === '/prompts',
@@ -53,20 +60,36 @@ export default defineConfig(({ mode }) => ({
             },
           },
           {
-            urlPattern: ({ url }: { url: URL }) => url.pathname.startsWith('/prompt-sample/'),
-            handler: 'CacheFirst',
-            options: {
-              cacheName: 'prompt-images',
-              expiration: { maxEntries: 50 },
-            },
-          },
-          {
             urlPattern: /\/generate$/,
             handler: 'NetworkOnly',
           },
           {
             urlPattern: /\/verify-payment$/,
             handler: 'NetworkOnly',
+          },
+          {
+            urlPattern: /\/models$/,
+            handler: 'CacheFirst',
+            options: {
+              cacheName: 'api-models',
+              expiration: { maxEntries: 5 },
+            },
+          },
+          {
+            urlPattern: /\/images\/.*/,
+            handler: 'CacheFirst',
+            options: {
+              cacheName: 'r2-images',
+              expiration: { maxEntries: 50, maxAgeSeconds: 30 * 24 * 60 * 60 },
+            },
+          },
+          {
+            urlPattern: /\/generated-images\/.*/,
+            handler: 'CacheFirst',
+            options: {
+              cacheName: 'generated-images',
+              expiration: { maxEntries: 50 },
+            },
           },
         ],
       },
@@ -95,10 +118,8 @@ export default defineConfig(({ mode }) => ({
 
 function generateSeoFiles(mode: string): Plugin {
   const routes = [
-    { path: '/', changefreq: 'weekly', priority: '1.0' },
-    { path: '/myImages', changefreq: 'weekly', priority: '0.7' },
-    { path: '/config', changefreq: 'monthly', priority: '0.3' },
-    { path: '/about', changefreq: 'monthly', priority: '0.6' },
+    { path: '/', changefreq: 'weekly', priority: '1.0', hasImage: true },
+    { path: '/about', changefreq: 'monthly', priority: '0.6', hasImage: false },
   ];
 
   return {
@@ -113,20 +134,28 @@ function generateSeoFiles(mode: string): Plugin {
       }
 
       const outDir = path.resolve(__dirname, 'dist');
+      const lastmod = new Date().toISOString();
 
       writeFileSync(path.join(outDir, 'robots.txt'), [
         'User-agent: *',
         'Allow: /',
+        'Disallow: /config',
+        'Disallow: /myImages',
         `Sitemap: ${baseUrl}/sitemap.xml`,
       ].join('\n') + '\n');
 
-      const urls = routes.map(r =>
-        `  <url>\n    <loc>${baseUrl}${r.path}</loc>\n    <changefreq>${r.changefreq}</changefreq>\n    <priority>${r.priority}</priority>\n  </url>`
-      ).join('\n');
+      const urls = routes.map(r => {
+        let entry = `  <url>\n    <loc>${baseUrl}${r.path}</loc>\n    <lastmod>${lastmod}</lastmod>\n    <changefreq>${r.changefreq}</changefreq>\n    <priority>${r.priority}</priority>`;
+        if (r.hasImage) {
+          entry += `\n    <image:image>\n      <image:loc>${baseUrl}/og-image.png</image:loc>\n      <image:title>Prompter - AI Image Generation</image:title>\n    </image:image>`;
+        }
+        entry += '\n  </url>';
+        return entry;
+      }).join('\n');
 
       writeFileSync(path.join(outDir, 'sitemap.xml'), [
         '<?xml version="1.0" encoding="UTF-8"?>',
-        '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">',
+        '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:image="http://www.google.com/schemas/sitemap-image/1.1">',
         urls,
         '</urlset>',
       ].join('\n') + '\n');
