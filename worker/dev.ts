@@ -67,14 +67,14 @@ class MemoryR2 {
     };
   }
 
-  async put(key: string, value: ArrayBuffer): Promise<R2Object> {
+  async put(key: string, value: ArrayBuffer, options?: { httpMetadata?: R2HTTPMetadata; customMetadata?: Record<string, string> }): Promise<R2Object> {
     const obj: R2Object & { data: ArrayBuffer } = {
       key,
       version: '1',
       size: value.byteLength,
       uploaded: new Date(),
-      httpMetadata: {},
-      customMetadata: {},
+      httpMetadata: options?.httpMetadata || {},
+      customMetadata: options?.customMetadata || {},
       data: value,
     };
     this.store.set(key, obj);
@@ -116,7 +116,7 @@ const seedPrompts = async (kv: MemoryKV) => {
         name: prompt.name,
         prompt: prompt.prompt,
         category: prompt.category,
-        imageUrl: prompt.imageUrl,
+        imageUrls: prompt.imageUrls,
       }));
     }
     console.log(`✅ Seeded ${promptsData.length} prompts from prompts.json`);
@@ -126,13 +126,13 @@ const seedPrompts = async (kv: MemoryKV) => {
       name: 'Cyberpunk Portrait',
       prompt: 'Transform into a cyberpunk character with neon lights and futuristic implants',
       category: 'front-face',
-      imageUrl: 'https://picsum.photos/seed/cyberpunk/400/400',
+      imageUrls: { low: 'https://picsum.photos/seed/cyberpunk/400/400', high: '' },
     }));
     await kv.put('prompt-2', JSON.stringify({
       name: 'Fantasy Warrior',
       prompt: 'Transform into a medieval fantasy warrior in full armor',
       category: 'full-body',
-      imageUrl: 'https://picsum.photos/seed/warrior/400/400',
+      imageUrls: { low: 'https://picsum.photos/seed/warrior/400/400', high: '' },
     }));
   }
 };
@@ -142,9 +142,12 @@ const env = {
   PROMPTS_KV: new MemoryKV(),
   TXHASH_REGISTRY_KV: new MemoryKV(),
   IMAGES_R2: new MemoryR2(),
+  GENERATED_IMAGES_R2: new MemoryR2(),
   OPENROUTER_API_KEY: process.env.OPENROUTER_API_KEY || 'test-key',
-  GENERATION_MODEL: process.env.GENERATION_MODEL || 'sourceful/riverflow-v2-fast-preview',
-  X402_PRICE_USD: process.env.X402_PRICE_USD || '0.001',
+  GENERATION_LOW_MODEL: process.env.GENERATION_LOW_MODEL || 'sourceful/riverflow-v2-fast-preview',
+  GENERATION_HIGH_MODEL: process.env.GENERATION_HIGH_MODEL || 'google/gemini-3.1-flash-image-preview',
+  X402_LOW_PRICE_USD: process.env.X402_LOW_PRICE_USD || '0.01',
+  X402_HIGH_PRICE_USD: process.env.X402_HIGH_PRICE_USD || '0.05',
   X402_PAY_TO_ADDRESS: process.env.X402_PAY_TO_ADDRESS || '0x7B3193eEb2d754d126b70A1F184659D52740D306',
   LOCAL_DEV_BYPASS_PAYMENT: process.env.LOCAL_DEV_BYPASS_PAYMENT || 'true',
   BASE_RPC_URL: process.env.BASE_RPC_URL || 'https://mainnet.base.org',
@@ -155,9 +158,13 @@ const env = {
 await seedPrompts(env.PROMPTS_KV as MemoryKV);
 
 // Start server
+const executionCtx = {
+  waitUntil: (p: Promise<unknown>) => { p.catch(console.error); },
+};
+
 const server = serve({
   port: 8787,
-  fetch: (req) => app.fetch(req, env as any),
+  fetch: (req) => app.fetch(req, env as any, executionCtx as any),
 });
 
 console.log(`🚀 Local dev server running at http://localhost:${server.port}`);
@@ -166,9 +173,11 @@ console.log(`   - GET  http://localhost:${server.port}/health`);
 console.log(`   - GET  http://localhost:${server.port}/prompts`);
 console.log(`   - POST http://localhost:${server.port}/generate`);
 console.log(`\n💡 Config from .env:`);
-console.log(`   - GENERATION_MODEL: ${process.env.GENERATION_MODEL || 'sourceful/riverflow-v2-fast-preview'}`);
+console.log(`   - GENERATION_LOW_MODEL: ${env.GENERATION_LOW_MODEL}`);
+console.log(`   - GENERATION_HIGH_MODEL: ${env.GENERATION_HIGH_MODEL}`);
 console.log(`   - X402_PAY_TO_ADDRESS: ${env.X402_PAY_TO_ADDRESS}`);
-console.log(`   - X402_PRICE_USD: ${env.X402_PRICE_USD}`);
+console.log(`   - X402_LOW_PRICE_USD: ${env.X402_LOW_PRICE_USD}`);
+console.log(`   - X402_HIGH_PRICE_USD: ${env.X402_HIGH_PRICE_USD}`);
 console.log(`   - BASE_RPC_URL: ${env.BASE_RPC_URL}`);
 console.log(`   - MIN_CONFIRMATIONS: ${env.MIN_CONFIRMATIONS}`);
 console.log(`   - LOCAL_DEV_BYPASS_PAYMENT: ${env.LOCAL_DEV_BYPASS_PAYMENT}${env.LOCAL_DEV_BYPASS_PAYMENT === 'true' ? ' (payment validation bypassed)' : ' (payment validation ENABLED)'}`);

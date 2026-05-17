@@ -56,7 +56,8 @@ Installed skills are tracked in `skills-lock.json`, stored in `.agents/skills/`.
 ## Secrets
 
 - `OPENROUTER_API_KEY` — set via `wrangler secret put` or `.env` for local dev
-- `GENERATION_MODEL` — optional override for the AI model
+- \`GENERATION_LOW_MODEL\` — optional override for the low-tier AI model
+- \`GENERATION_HIGH_MODEL\` — optional override for the high-tier AI model
 
 ## DESIGN.md
 

@@ -122,7 +122,8 @@ Vite proxy in `frontend/vite.config.ts` rewrites `/api/*` to `http://localhost:8
 
 **Secrets (via `wrangler secret put`):**
 - `OPENROUTER_API_KEY` - OpenRouter API key
-- `GENERATION_MODEL` - Optional: override the AI model
+- \`GENERATION_LOW_MODEL\` - Optional: override the low-tier AI model
+- \`GENERATION_HIGH_MODEL\` - Optional: override the high-tier AI model
 
 **Environment Variables (wrangler.toml):**
 - `BASE_RPC_URL` - Base network RPC (default: `https://mainnet.base.org`)
@@ -130,7 +131,7 @@ Vite proxy in `frontend/vite.config.ts` rewrites `/api/*` to `http://localhost:8
 
 **Local Development (.env):**
 - `LOCAL_DEV_BYPASS_PAYMENT` - Set to `true` to skip payment validation
-- `X402_PRICE_USD` - Payment amount in USD (default: `0.001`)
+- `X402_LOW_PRICE_USD` / `X402_HIGH_PRICE_USD` - Tier-specific prices in USD
 - `X402_PAY_TO_ADDRESS` - USDC recipient address
 
 **Frontend:**

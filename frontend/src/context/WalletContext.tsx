@@ -6,7 +6,7 @@ interface WalletContextType extends PaymentState {
   makePayment: (paymentRequired: any, originalRequest: () => Promise<Response>) => Promise<Response>;
   createUSDCTransaction: (paymentDetails: { payTo: any; amount: string }) => { to: any; data: any; value: any; from: any };
   signAndSendTransaction: (paymentDetails: { payTo: any; amount: string }) => Promise<string>;
-  verifyPayment: (txHash: string, promptId: string, referenceImage?: string) => Promise<Response>;
+  verifyPayment: (txHash: string, promptId: string, referenceImage?: string, modelTier?: string, generationId?: string) => Promise<Response>;
   parsePaymentRequired: (response: Response) => Promise<any>;
   resetPayment: () => void;
   disconnectWallet: () => void;

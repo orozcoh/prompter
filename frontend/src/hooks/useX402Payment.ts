@@ -257,7 +257,9 @@ export function useX402Payment() {
   const verifyPayment = useCallback(async (
     txHash: string,
     promptId: string,
-    referenceImage?: string
+    referenceImage?: string,
+    modelTier?: string,
+    generationId?: string
   ): Promise<Response> => {
     setState(prev => ({ ...prev, isVerifying: true, error: null }));
 
@@ -271,6 +273,8 @@ export function useX402Payment() {
           txHash,
           promptId,
           referenceImage,
+          modelTier,
+          generationId,
         }),
       });
 

@@ -93,7 +93,8 @@ bucket_name = "prompter-images"
 wrangler secret put OPENROUTER_API_KEY
 
 # AI model override (optional)
-wrangler secret put GENERATION_MODEL
+wrangler secret put GENERATION_LOW_MODEL
+wrangler secret put GENERATION_HIGH_MODEL
 ```
 
 ---
@@ -111,7 +112,8 @@ By default, payment validation is bypassed (`LOCAL_DEV_BYPASS_PAYMENT=true`). To
 
 2. **Configure payment settings** (optional - defaults provided):
    ```env
-   X402_PRICE_USD=0.10
+   X402_LOW_PRICE_USD=0.01
+   X402_HIGH_PRICE_USD=0.05
    X402_PAY_TO_ADDRESS=0xYourUsdcRecipientAddress
    BASE_RPC_URL=https://mainnet.base.org
    MIN_CONFIRMATIONS=3

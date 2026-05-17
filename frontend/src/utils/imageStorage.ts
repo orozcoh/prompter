@@ -24,6 +24,7 @@ export interface StoredImage {
   txHash?: string;
   cost?: string;
   model?: string;
+  generationId?: string;
 }
 
 function openDB(): Promise<IDBDatabase> {
@@ -75,6 +76,11 @@ export async function getAllImages(): Promise<StoredImage[]> {
   });
 }
 
+export async function getImageByGenerationId(generationId: string): Promise<StoredImage | undefined> {
+  const images = await getAllImages();
+  return images.find(img => img.generationId === generationId);
+}
+
 export async function deleteImage(id: string): Promise<void> {
   const db = await openDB();
   return new Promise((resolve, reject) => {
@@ -99,4 +105,40 @@ export async function getStorageSize(): Promise<{ bytes: number; count: number }
   const images = await getAllImages();
   const bytes = images.reduce((sum, img) => sum + img.imageUrl.length, 0);
   return { bytes, count: images.length };
+}
+
+// ─────────────────────────────────────
+// Pending generation helpers (reconnect buffer via R2)
+// ─────────────────────────────────────
+
+const PENDING_KEY = 'prompter-pending-gens';
+
+export interface PendingGeneration {
+  generationId: string;
+  promptId: string;
+  promptName: string;
+  fileName: string;
+  model?: string;
+  cost?: string;
+  txHash?: string;
+}
+
+export function getPendingGenerations(): PendingGeneration[] {
+  try {
+    const raw = localStorage.getItem(PENDING_KEY);
+    return raw ? JSON.parse(raw) : [];
+  } catch {
+    return [];
+  }
+}
+
+export function addPendingGeneration(pending: PendingGeneration): void {
+  const list = getPendingGenerations();
+  list.push(pending);
+  localStorage.setItem(PENDING_KEY, JSON.stringify(list));
+}
+
+export function removePendingGeneration(generationId: string): void {
+  const list = getPendingGenerations().filter(p => p.generationId !== generationId);
+  localStorage.setItem(PENDING_KEY, JSON.stringify(list));
 }
