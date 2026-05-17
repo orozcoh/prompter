@@ -34,7 +34,7 @@ export default defineConfig(({ mode }) => ({
           },
           {
             src: '/favicon.ico',
-            sizes: '512x512',
+            sizes: '256x256',
             type: 'image/png',
             purpose: 'any maskable',
           },
@@ -50,14 +50,6 @@ export default defineConfig(({ mode }) => ({
             options: {
               cacheName: 'api-prompts',
               expiration: { maxEntries: 10 },
-            },
-          },
-          {
-            urlPattern: ({ url }: { url: URL }) => url.pathname.startsWith('/prompt-sample/'),
-            handler: 'CacheFirst',
-            options: {
-              cacheName: 'prompt-images',
-              expiration: { maxEntries: 50 },
             },
           },
           {
