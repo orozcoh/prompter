@@ -2,6 +2,27 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
+    <script>
+    (function() {
+      try {
+        var version = '__BUILD_VERSION__';
+        var key = 'pwa_version';
+        var stored = localStorage.getItem(key);
+        if (stored !== version) {
+          localStorage.setItem(key, version);
+          if (stored) {
+            caches.keys().then(function(keys) {
+              return Promise.all(keys.map(function(k) { return caches.delete(k); }));
+            }).then(function() {
+              return navigator.serviceWorker.getRegistrations().then(function(regs) {
+                return Promise.all(regs.map(function(r) { return r.unregister(); }));
+              });
+            }).then(function() { location.reload(); });
+          }
+        }
+      } catch(e) {}
+    })();
+    </script>
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <link rel="icon" type="image/png" sizes="96x96" href="/favicon-96x96.png" />
     <link rel="manifest" href="/manifest.webmanifest" />

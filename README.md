@@ -6,17 +6,26 @@
 [![Powered by](https://img.shields.io/badge/powered%20by-OpenRouter-orange)](https://openrouter.ai)
 [![x402 enabled](https://img.shields.io/badge/x402-enabled-green)](https://x402.org)
 
-Prompter is an AI image generation platform that lets you transform reference images using curated prompt styles. Built on Cloudflare Workers with x402 protocol for trustless, pay-per-use payments.
+Prompt-based AI image generation on Cloudflare Workers with trustless, on-chain x402 payments via USDC on Base.
 
 ---
 
 ## ✨ Features
 
-- 📸 **Reference Image Upload** — Drag-and-drop support for front face, full body, or any image
-- 🎨 **Prompt Catalog** — Browse curated styles with live preview images
-- 🤖 **AI Generation** — Powered by OpenRouter (sourceful/riverflow-v2-fast-preview)
-- 💰 **x402 Payments** — Pay only when you generate with on-chain USDC on Base
-- ⚡ **Auto-Download** — Generated images download automatically
+- 📸 Reference image upload with drag-and-drop
+- 🎨 Curated prompt catalog with live previews
+- 🤖 Dual-tier AI generation (OpenRouter: sourceful/riverflow-v2-fast + gemini-3.1-flash)
+- 💰 Pay-per-use x402 payments (USDC on Base, no subscriptions)
+- 📱 Installable PWA with offline-first caching and auto-recovery on deploy
+- 🔍 Auto-generated sitemap, robots.txt, Open Graph meta, and structured data
+
+---
+
+## 🏗 Architecture
+
+![Architecture](docs/architecture.png)
+
+*(Full interactive diagram: `docs/architecture.html`)*
 
 ---
 
@@ -24,257 +33,131 @@ Prompter is an AI image generation platform that lets you transform reference im
 
 | Layer | Technology |
 |-------|------------|
-| **Frontend** | Vite + React 19 + TypeScript |
+| **Frontend** | Vite + React 19 + TypeScript + react-router-dom |
 | **Backend** | Cloudflare Workers + Hono |
-| **Storage** | Cloudflare KV (prompts) + R2 (images - planned) |
-| **AI** | OpenRouter API |
+| **Storage** | KV (prompts, tx registry) + R2 (catalog images, generated images) |
+| **AI** | OpenRouter API (dual model tiers) |
 | **Payments** | x402 protocol + USDC on Base |
+| **Wallet** | wagmi 3 + viem 2 (MetaMask + WalletConnect) |
+| **PWA** | vite-plugin-pwa + Workbox (offline-first, auto-update) |
 | **Runtime** | Bun |
 
 ---
 
 ## 🚀 Quick Start
 
-### Local Development (No Cloudflare Required)
-
 ```bash
-# Clone and install
 git clone https://github.com/your-org/prompter.git
-cd prompter
-bun install
+cd prompter && bun install
 
-# Start local worker (in-memory KV/R2, auto-seeded)
+# Terminal 1: Local worker (in-memory KV/R2, auto-seeded, payments bypassed)
 bun run dev:local
 
-# Start frontend (new terminal)
+# Terminal 2: Frontend
 cd frontend && bun dev
 ```
 
-Visit `http://localhost:3000` to start generating images.
+Visit `http://localhost:3000`. Requires [Bun](https://bun.com) and an OpenRouter API key.
 
 ---
 
-## 📋 Requirements
+## 🛠 Environment
 
-- [Bun](https://bun.com) (v1.x+)
-- Cloudflare account (for deployment)
-- OpenRouter API key (for AI generation)
-
----
-
-## 🛠️ Setup & Configuration
-
-### 1. Create Cloudflare Resources
-
-```bash
-# KV namespace for prompts
-wrangler kv namespace create PROMPTS_KV
-
-# R2 bucket for catalog images
-wrangler r2 bucket create prompter-images
-```
-
-### 2. Configure wrangler.toml
-
-```toml
-[[kv_namespaces]]
-binding = "PROMPTS_KV"
-id = "<your-kv-namespace-id>"
-
-[[r2_buckets]]
-binding = "IMAGES_R2"
-bucket_name = "prompter-images"
-```
-
-### 3. Set Secrets
-
-```bash
-# OpenRouter API key (required)
-wrangler secret put OPENROUTER_API_KEY
-
-# AI model override (optional)
-wrangler secret put GENERATION_LOW_MODEL
-wrangler secret put GENERATION_HIGH_MODEL
-```
-
----
-
-## 💳 x402 Payment Setup
-
-By default, payment validation is bypassed (`LOCAL_DEV_BYPASS_PAYMENT=true`). To enable real payments:
-
-### Enable Payments
-
-1. **Set environment variable** in `.env`:
-   ```env
-   LOCAL_DEV_BYPASS_PAYMENT=false
-   ```
-
-2. **Configure payment settings** (optional - defaults provided):
-   ```env
-   X402_LOW_PRICE_USD=0.01
-   X402_HIGH_PRICE_USD=0.05
-   X402_PAY_TO_ADDRESS=0xYourUsdcRecipientAddress
-   BASE_RPC_URL=https://mainnet.base.org
-   MIN_CONFIRMATIONS=3
-   ```
-
-### How It Works
-
-```
-┌─────────────┐     ┌──────────────┐     ┌──────────────┐     ┌─────────────┐
-│   Frontend  │────▶│  /generate   │────▶│  x402 402    │────▶│   Wallet    │
-│   (React)   │     │   (Hono)     │     │   Response   │     │   Sign USDC │
-└─────────────┘     └──────────────┘     └──────────────┘     └─────────────┘
-                                                                    │
-┌─────────────┐     ┌──────────────┐     ┌──────────────┐          │
-│   Download  │◀────│  OpenRouter  │◀────│  /verify-    │◀─────────┘
-│   Image     │     │   API Call   │     │   payment    │  (tx hash)
-└─────────────┘     └──────────────┘     └──────────────┘
-```
-
-**Payment flow:**
-1. User clicks generate → `/generate` returns HTTP 402 with x402 payment details
-2. Frontend prompts user to send USDC directly to `X402_PAY_TO_ADDRESS`
-3. User signs USDC transfer transaction via their wallet (MetaMask, WalletConnect, etc.)
-4. Frontend submits tx hash to `/verify-payment`
-5. Worker verifies payment on-chain via Base RPC (checks confirmations, amount, recipient)
-6. On success, worker calls OpenRouter API and returns generated image
-7. Tx hash is stored in KV to prevent replay attacks
-
-**No facilitator needed** - users pay USDC directly to your address, and the worker verifies transactions on-chain.
-
----
-
-## 📦 Seed Data
-
-### KV Data Structure
-Prompts are stored with keys following this pattern: `prompt-{prompt-id}`
-Example: `prompt-any-001`, `prompt-any-002`, etc.
-
-Each value is a JSON object:
-```json
-{
-  "name": "Prompt Name",
-  "prompt": "AI prompt text",
-  "category": "category",
-  "imageUrl": "/path/to/image.png"
-}
-```
-
-### Bulk Population
-To populate the production KV from `prompts.json`, use the provided population script:
-```bash
-bun run scripts/populate-kv.ts
-```
-*Note: The script uses `wrangler kv key put --remote` to ensure data is uploaded to the production environment.*
-
-### Manual Entry (Single Prompt)
-```bash
-wrangler kv key put PROMPTS_KV "prompt-1" --value '{
-  "name": "Cyberpunk Portrait",
-  "prompt": "Transform into a cyberpunk character with neon lights and futuristic implants",
-  "category": "front-face"
-}'
-```
-
-### Upload Catalog Images to R2
-
-```bash
-wrangler r2 object put prompter-images/prompt-1.jpg --file=./path/to/image.jpg
-```
-
----
-
-## 🌍 Deployment
-
-Prompter uses a **split deployment** model: the backend is a Cloudflare Worker (API only), and the frontend is a separate Cloudflare Pages project.
-
-### Architecture
-
-```
-Browser ──▶ prompter-frontend.pages.dev (static SPA)
-                │
-                ▼ API calls (VITE_API_URL)
-            prompter-worker.digitalerror.xyz (Worker: /prompts, /generate, /verify-payment)
-```
-
-### Deploy the Worker (API)
-
-```bash
-# One-time: create KV namespace and R2 bucket (see Setup section)
-wrangler kv namespace create PROMPTS_KV
-wrangler r2 bucket create prompter-images
-
-# Set secrets (one-time)
-wrangler secret put OPENROUTER_API_KEY
-
-# Deploy
-bun run deploy
-```
-
-### Deploy the Frontend (Pages)
-
-```bash
-# One-time: create the Pages project
-wrangler pages project create prompter-frontend
-
-# Build and deploy (repeat on every update)
-bun run deploy:frontend
-```
-
-The `_redirects` file (`/* /index.html 200`) handles SPA client-side routing so `/about`, `/myImages`, etc. work without 404s.
-
-### Set the Frontend API URL
-
-Before deploying, configure the Worker URL in `frontend/.env.production`:
+### Worker (`wrangler.toml` + secrets)
 
 ```env
-VITE_API_URL=https://prompter-worker.digitalerror.xyz
+OPENROUTER_API_KEY=sk-or-v1-...      # secret (wrangler secret put)
+X402_LOW_PRICE_USD=0.01
+X402_HIGH_PRICE_USD=0.05
+X402_PAY_TO_ADDRESS=0x7B3193eEb2d...
+LOCAL_DEV_BYPASS_PAYMENT=true        # false for production
+BASE_RPC_URL=https://mainnet.base.org
+MIN_CONFIRMATIONS=3
 ```
 
-### All-in-One (first time)
+### Frontend (`frontend/.env.production`)
 
-```bash
-# 1. Create Pages project
-wrangler pages project create prompter-frontend
-
-# 2. Deploy Worker
-bun run deploy
-
-# 3. Deploy Frontend
-bun run deploy:frontend
+```env
+VITE_API_URL=https://example.xyz
+VITE_WALLETCONNECT_PROJECT_ID=...
+VITE_UI_BASE_URL=https://example-url.xyz
 ```
 
 ---
 
-## 📂 Project Structure
+## ☁️ Cloudflare Setup
+
+```bash
+# KV namespaces
+wrangler kv namespace create PROMPTS_KV
+wrangler kv namespace create TXHASH_REGISTRY_KV
+
+# R2 buckets
+wrangler r2 bucket create prompter-images
+wrangler r2 bucket create prompter-generated
+wrangler r2 bucket lifecycle add prompter-generated "auto-expire-1d" "" --expire-days 1 --force
+
+# Secrets
+wrangler secret put OPENROUTER_API_KEY
+```
+
+Update binding IDs in `wrangler.toml`.
+
+---
+
+## 💾 Seed Data
+
+Prompts are stored in KV as `prompt-{prompt-id}` with JSON values. The `prompt` field is stripped from public API responses.
+
+```bash
+bun run scripts/populate-kv.ts       # KV from prompts.json
+bun run scripts/upload-reference-images.ts  # R2 catalog images
+```
+
+---
+
+## 💳 Payment Flow (x402)
+
+1. `POST /generate` → Worker returns HTTP 402 with x402 payment details
+2. User signs USDC transfer on Base via wallet
+3. `POST /verify-payment` → Worker verifies on-chain via viem:
+   - Checks transaction status + confirmations
+   - Parses USDC Transfer events
+   - Validates amount ≥ price + recipient = `X402_PAY_TO_ADDRESS`
+   - Marks tx hash in `TXHASH_REGISTRY_KV` (replay protection)
+4. Worker calls OpenRouter → returns generated image
+5. Image cached in `GENERATED_IMAGES_R2` (auto-deleted after 1 day)
+
+---
+
+## 🌍 Deploy
+
+```bash
+bun run deploy                    # Worker to Cloudflare
+bun run deploy:frontend           # Frontend to Cloudflare Pages
+```
+
+The `_redirects` file (`/* /index.html 200`) handles SPA routing.
+
+---
+
+## 📂 Structure
 
 ```
 prompter/
-├── worker/
-│   ├── index.ts            # Hono API routes
-│   ├── dev.ts              # Local dev server (mocked KV/R2)
-│   └── utils/
-│       └── verifyPayment.ts # On-chain payment verification
-├── frontend/
-│   ├── src/
-│   │   ├── components/
-│   │   │   ├── ImageUpload.tsx
-│   │   │   ├── PromptGallery.tsx
-│   │   │   ├── StatusIndicator.tsx
-│   │   │   ├── PaywallModal.tsx
-│   │   │   └── WalletSelectionModal.tsx
-│   │   ├── hooks/
-│   │   │   └── useX402Payment.ts
-│   │   ├── utils/
-│   │   │   ├── extractImageUrl.ts
-│   │   │   └── walletConnect.ts
-│   │   └── App.tsx
-│   └── vite.config.ts
-├── wrangler.toml
-├── package.json
-└── CLAUDE.md
+├── worker/                    # Hono API (Cloudflare Worker)
+│   ├── index.ts               # 7 REST endpoints
+│   ├── dev.ts                 # Local dev server
+│   └── utils/verifyPayment.ts # On-chain verification
+├── frontend/                  # Vite + React 19 SPA
+│   ├── src/components/        # 13 components
+│   ├── src/pages/             # 4 routes + 404
+│   ├── src/context/           # WalletContext + ImagesContext
+│   ├── src/hooks/             # useX402Payment
+│   └── vite.config.ts         # PWA, proxy, SEO generation
+├── scripts/                   # CLI: KV populate, R2 upload, prompt generator
+├── wrangler.toml              # Worker config
+└── DESIGN.md                  # Design system (tokens, components, a11y)
 ```
 
 ---

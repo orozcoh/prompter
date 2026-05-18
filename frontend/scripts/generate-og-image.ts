@@ -1,7 +1,12 @@
 import satori from 'satori';
 import sharp from 'sharp';
-import { readFileSync, writeFileSync } from 'fs';
+import { writeFileSync } from 'fs';
 import { join } from 'path';
+
+interface SatoriElement {
+  type: string;
+  props: Record<string, unknown> & { children?: SatoriElement[] };
+}
 
 const SCRIPT_DIR = import.meta.dir;
 const PUBLIC_DIR = join(SCRIPT_DIR, '..', 'public');
@@ -11,7 +16,7 @@ const HEIGHT = 630;
 async function fetchFont(family: string, weight: number): Promise<ArrayBuffer> {
   const urlFriendly = family.replace(/ /g, '+');
   const cssUrl = `https://fonts.googleapis.com/css2?family=${urlFriendly}:wght@${weight}`;
-  let resp = await fetch(cssUrl, {
+  const resp = await fetch(cssUrl, {
     headers: { 'User-Agent': 'Mozilla/5.0 AppleWebKit/537.36' },
   });
   if (!resp.ok) {
@@ -36,15 +41,10 @@ async function main() {
   const orbitron = await fetchFont('Orbitron', 900);
   const shareTechMono = await fetchFont('Share Tech Mono', 400);
 
-  // 2. Convert favicon.ico to PNG data URI via sips (macOS built-in)
+  // 2. Load favicon from 512x512 PWA icon (downscale for crisp result)
   console.log('  [2/4] Processing favicon...');
-  const faviconPath = join(PUBLIC_DIR, 'favicon.ico');
-  const { stderr } = Bun.spawnSync([
-    'sips', '-s', 'format', 'png', faviconPath, '--out', '/tmp/favicon-og.png',
-  ]);
-  if (stderr.length > 0) console.error('    sips stderr:', stderr.toString());
-  const faviconPng = await sharp('/tmp/favicon-og.png')
-    .resize(140, 140, { fit: 'contain', background: { r: 0, g: 0, b: 0, alpha: 0 } })
+  const faviconPng = await sharp(join(PUBLIC_DIR, 'web-app-manifest-512x512.png'))
+    .resize(280, 280)
     .png()
     .toBuffer();
   const faviconDataUri = `data:image/png;base64,${faviconPng.toString('base64')}`;
@@ -188,7 +188,8 @@ async function main() {
           },
         ],
       },
-    },
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    } as any,
     {
       width: WIDTH,
       height: HEIGHT,
