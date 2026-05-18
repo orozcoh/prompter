@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { HelmetProvider } from 'react-helmet-async';
 import Header from './components/Header';
@@ -28,29 +28,39 @@ const AppShell = () => {
 
   const { isConnected, isConnecting, connectWallet, hasInjectedWallet } = useWallet();
 
+  const isMobile = useMemo(() => /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent), []);
+
   const handleSelectWallet = async (type: 'injected' | 'walletconnect') => {
     try {
-      if (type === 'injected') setShowWalletSelection(false);
+      setShowWalletSelection(false);
       await connectWallet(type);
-      if (type === 'injected') setShowWalletSelection(false);
     } catch (err) {
       console.error('Wallet connection failed:', err);
     }
   };
+
+  const handleConnectClick = useCallback(() => {
+    if (isConnected) return;
+    if (isMobile || !hasInjectedWallet) {
+      handleSelectWallet('walletconnect');
+    } else {
+      setShowWalletSelection(true);
+    }
+  }, [isConnected, isMobile, hasInjectedWallet]);
 
   return (
     <div className="app">
       <Header
         isMenuOpen={isSidePanelOpen}
         onMenuClick={() => setIsSidePanelOpen(prev => !prev)}
-        onConnectClick={() => !isConnected && setShowWalletSelection(true)}
+        onConnectClick={handleConnectClick}
       />
       <SidePanel isOpen={isSidePanelOpen} onClose={() => setIsSidePanelOpen(false)} />
       <div style={{ flex: 1 }}>
         <Routes>
           <Route
             path="/"
-            element={<HomePage onConnectWallet={() => setShowWalletSelection(true)} />}
+            element={<HomePage onConnectWallet={handleConnectClick} />}
           />
           <Route path="/myImages" element={<MyImagesPage />} />
           <Route path="/config" element={<ConfigPage />} />

@@ -11,6 +11,7 @@ export default defineConfig(({ mode }) => ({
     react(),
     {
       name: 'inject-build-version',
+      apply: 'build',
       transformIndexHtml(html) {
         return html.replace('__BUILD_VERSION__', Date.now().toString(36));
       },

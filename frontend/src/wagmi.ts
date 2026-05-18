@@ -1,8 +1,8 @@
-import { createConfig, http, injected } from '@wagmi/core';
-import { base } from 'viem/chains';
-import { walletConnect } from '@wagmi/connectors';
+import { createConfig, http } from '@wagmi/core'
+import { walletConnect, injected } from '@wagmi/connectors'
+import { base } from 'viem/chains'
 
-const projectId = import.meta.env.VITE_WALLETCONNECT_PROJECT_ID || '513332cf5c05e1de19195e7dd676a213';
+const projectId = import.meta.env.VITE_WALLETCONNECT_PROJECT_ID
 
 export const config = createConfig({
   chains: [base],
@@ -10,22 +10,16 @@ export const config = createConfig({
     injected(),
     walletConnect({
       projectId,
-      showQrModal: true,
-      qrModalOptions: {
-        themeMode: 'dark',
-        themeVariables: {
-          '--wcm-z-index': '9999',
-        },
-      },
       metadata: {
         name: 'Prompter',
         description: 'AI Image Generation Platform',
-        url: typeof window !== 'undefined' ? window.location.origin : '',
-        icons: [typeof window !== 'undefined' ? `${window.location.origin}/favicon.ico` : ''],
+        url: 'https://ai.digitalerror.xyz',
+        icons: ['https://ai.digitalerror.xyz/favicon-96x96.png'],
       },
+      showQrModal: true,
     }),
   ],
   transports: {
     [base.id]: http(),
   },
-});
+})

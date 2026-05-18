@@ -126,13 +126,13 @@ const seedPrompts = async (kv: MemoryKV) => {
       name: 'Cyberpunk Portrait',
       prompt: 'Transform into a cyberpunk character with neon lights and futuristic implants',
       category: 'front-face',
-      imageUrls: { low: 'https://picsum.photos/seed/cyberpunk/400/400', high: '' },
+      imageUrls: { low: '', high: '' },
     }));
     await kv.put('prompt-2', JSON.stringify({
       name: 'Fantasy Warrior',
       prompt: 'Transform into a medieval fantasy warrior in full armor',
       category: 'full-body',
-      imageUrls: { low: 'https://picsum.photos/seed/warrior/400/400', high: '' },
+      imageUrls: { low: '', high: '' },
     }));
   }
 };
