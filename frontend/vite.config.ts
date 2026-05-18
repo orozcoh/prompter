@@ -9,6 +9,12 @@ import { writeFileSync } from 'fs';
 export default defineConfig(({ mode }) => ({
   plugins: [
     react(),
+    {
+      name: 'inject-build-version',
+      transformIndexHtml(html) {
+        return html.replace('__BUILD_VERSION__', Date.now().toString(36));
+      },
+    },
     nodePolyfills({
       globals: {
         Buffer: true,
@@ -46,6 +52,7 @@ export default defineConfig(({ mode }) => ({
         ],
       },
       workbox: {
+        cleanupOutdatedCaches: true,
         maximumFileSizeToCacheInBytes: 3_000_000,
         globPatterns: ['**/*.{js,css,html,svg,png,jpg,woff2}'],
         navigateFallback: '/index.html',

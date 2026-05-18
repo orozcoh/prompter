@@ -11,7 +11,6 @@ import HomePage from './pages/HomePage';
 import MyImagesPage from './pages/MyImagesPage';
 import ConfigPage from './pages/ConfigPage';
 import AboutPage from './pages/AboutPage';
-import { useRegisterSW } from 'virtual:pwa-register/react';
 import './App.css';
 
 const NotFound = () => (
@@ -72,47 +71,15 @@ const AppShell = () => {
 };
 
 function App() {
-  const {
-    needRefresh: [needRefresh, setNeedRefresh],
-    updateServiceWorker,
-  } = useRegisterSW({
-    onRegisteredSW(swUrl, r) {
-      if (r) {
-        setInterval(async () => {
-          if (r.installing || !navigator.onLine) return;
-          const resp = await fetch(swUrl, { cache: 'no-store' });
-          if (resp?.status === 200) await r.update();
-        }, 60 * 60 * 1000);
-      }
-    },
-  });
-
   return (
     <HelmetProvider>
       <WalletProvider>
         <ImagesProvider>
           <BrowserRouter>
             <AppShell />
-          {needRefresh && (
-            <div className="pwa-update-banner">
-              <span>New version available</span>
-              <button
-                className="button primary"
-                onClick={() => updateServiceWorker(true)}
-              >
-                Refresh
-              </button>
-              <button
-                className="button secondary"
-                onClick={() => setNeedRefresh(false)}
-              >
-                Dismiss
-              </button>
-            </div>
-          )}
-        </BrowserRouter>
-      </ImagesProvider>
-    </WalletProvider>
+          </BrowserRouter>
+        </ImagesProvider>
+      </WalletProvider>
     </HelmetProvider>
   );
 }
