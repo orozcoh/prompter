@@ -1,9 +1,16 @@
 [
   {
+    "prompt-id": "ref",
+    "name": "Prompt Reference",
+    "category": "reference",
+    "prompt": "",
+    "imageUrls": { "low": "https://example.com", "high": "https://example.com" }
+  },
+  {
     "prompt-id": "example-001",
     "name": "Example Style",
     "category": "portrait",
     "prompt": "Your detailed AI prompt goes here. Be specific about style, lighting, and composition.",
-    "imageUrls": { "low": "https://example.com", "high": "" }
+    "imageUrls": { "low": "https://example.com", "high": "https://example.com" }
   }
 ]
